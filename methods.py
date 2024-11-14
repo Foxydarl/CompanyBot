@@ -11,7 +11,8 @@ cursor = conn.cursor()
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS dates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT
+        date TEXT,
+        time TEXT
     )
 ''')
 
@@ -25,6 +26,7 @@ def request_mess(msg, prompt, dialog_history):
 
     payload = {
         "providers": "openai",
+        "settings": { "openai": "gpt-4o" } ,
         "text": msg,
         "chatbot_global_action": prompt,
         "previous_history": dialog_history,
@@ -36,7 +38,7 @@ def request_mess(msg, prompt, dialog_history):
     result = json.loads(response.text)
     print("-" * 80)
     print(result)
-    return (result['openai']['generated_text'])
+    return (result['openai/gpt-4o-2024-08-06']['choices'][0]['message']['content'])
 
 def get_mess(msg, prompt, use_history, dialog_history):
     if use_history == False:

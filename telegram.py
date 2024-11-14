@@ -1,10 +1,6 @@
 import telebot
 from config import token
-from telebot import types
-import requests
-import json
 from methods import *
-import sqlite3
 
 dialog = []
 headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNDcyNDg2ODAtNjMzMC00MmJiLWE3NGItMjlkNTQyYjJiNzFhIiwidHlwZSI6ImFwaV90b2tlbiJ9.y_1ufwKGnOWSZqAFgDJO0h99aoOXZ9dUZDKyNBvw6ks"}
@@ -50,7 +46,7 @@ def welcome(message):
             all_dates = get_all_dates_from_db()
             # Формируем строку с датами для добавления в prompt
             dates_text = "\n".join(all_dates) if all_dates else "Нет доступных дат."
-            sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'Название компании', ты отвечаешь на вопросы по поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат: {dates_text}, если в списке нету даты, значит нету брони", False, [])
+            sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'Хуй в трусах', ты отвечаешь на вопросы по поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат: {dates_text}, если в списке нету даты, значит нету брони", False, [])
             print("-" * 80)
             print(dates_text)
             bot.send_message(message.chat.id, sgen_text)
