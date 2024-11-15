@@ -42,13 +42,21 @@ def welcome(message):
     try:
 
         if not message.text.startswith('!'):
+            dialog = get_dialog_from_db(message.chat.id)
+            if len(dialog) >= 2:
+                dialog = dialog[2:]
             # Получаем все даты из базы данных
             all_dates = get_all_dates_from_db()
             # Формируем строку с датами для добавления в prompt
             dates_text = "\n".join(all_dates) if all_dates else "Нет доступных дат."
-            sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'Хуй в трусах', ты отвечаешь на вопросы по поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат: {dates_text}, если в списке нету даты, значит нету брони", False, [])
+            sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'Хуй в трусах', ты отвечаешь на вопросы по поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат: {dates_text}, если в списке нету даты, значит нету брони", True, dialog)
             print("-" * 80)
             print(dates_text)
+            dialog.append({"role": "user", "message": message.text})
+            dialog.append({"role": "assistant", "message": sgen_text})
+            save_dialog_to_db(message.chat.id, dialog)
+            print("-" * 80)
+            print(dialog)
             bot.send_message(message.chat.id, sgen_text)
     except TypeError as e:
         error_text = e.args[0]

@@ -15,7 +15,14 @@ cursor.execute('''
         time TEXT
     )
 ''')
-
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS dialogs (
+        user_id INTEGER,
+        dialog_history TEXT,
+        PRIMARY KEY (user_id)
+    )
+''')
+conn.commit()
 
 
 
@@ -28,7 +35,7 @@ def request_mess(msg, prompt, dialog_history):
         "providers": "openai",
         "settings": { "openai": "gpt-4o" } ,
         "text": msg,
-        "chatbot_global_action": prompt,
+        "chatbot_global_action": prompt ,
         "previous_history": dialog_history,
         "temperature": 0.0,
         "max_tokens": 150,
@@ -38,7 +45,8 @@ def request_mess(msg, prompt, dialog_history):
     result = json.loads(response.text)
     print("-" * 80)
     print(result)
-    return (result['openai/gpt-4o-2024-08-06']['choices'][0]['message']['content'])
+
+    return (result['openai']['generated_text'])
 
 def get_mess(msg, prompt, use_history, dialog_history):
     if use_history == False:
@@ -110,3 +118,20 @@ def get_all_dates_from_db():
     cursor.execute("SELECT * FROM dates ORDER BY date ASC")
     rows = cursor.fetchall()
     return [date[1] for date in rows]
+
+def get_dialog_from_db(user_id):
+    """Извлечение диалога для указанного пользователя"""
+    cursor.execute("SELECT dialog_history FROM dialogs WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    if row:
+        return json.loads(row[0])  # Преобразование из JSON
+    return []
+
+def save_dialog_to_db(user_id, dialog_history):
+    """Сохранение диалога в базу данных"""
+    dialog_json = json.dumps(dialog_history)  # Преобразование в JSON
+    cursor.execute(
+        "INSERT OR REPLACE INTO dialogs (user_id, dialog_history) VALUES (?, ?)",
+        (user_id, dialog_json)
+    )
+    conn.commit()
