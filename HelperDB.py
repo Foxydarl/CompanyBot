@@ -130,3 +130,5 @@ def add_admins_to_db(user_id):
         print("Этот chat_id уже существует в базе данных.")
     finally:
         conn.close()
+
+

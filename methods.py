@@ -1,7 +1,7 @@
 import requests
 import json
 from datetime import datetime
-
+import os
 
 
 def request_mess(msg, prompt, dialog_history):
@@ -36,3 +36,12 @@ def get_mess(msg, prompt, use_history, dialog_history):
 
 def getDateAndTime(self):
     return datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+
+
+def get_presentations():
+    folder_path = 'presentations'
+    return [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith('.pdf') or file.endswith('.pptx')]
+
+def get_videos():
+    folder_path = 'videos'
+    return [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith(('.mp4', '.mov'))]
