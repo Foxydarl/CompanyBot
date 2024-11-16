@@ -135,3 +135,6 @@ def save_dialog_to_db(user_id, dialog_history):
         (user_id, dialog_json)
     )
     conn.commit()
+
+def getDateAndTime(self):
+    return datetime.now().strftime("%d-%m-%Y %H:%M:%S")

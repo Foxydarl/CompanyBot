@@ -1,3 +1,2 @@
 token = "6514999735:AAHO4Ypc87aYUZ8nbDTMp6Ny8ULepl6c3fE"
 OpenAiKey = "sk-proj-GePG6cuVxFN15bWwOyOYT3BlbkFJKbLGa52hLA5d4ckKl6Pu"
-weather = "77c79fd52fb3477cbf2195238232311"
