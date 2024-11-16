@@ -19,7 +19,6 @@ admins = ['f4est_f', 'amida_f']
 
 createDataBase("Def")
 
-
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-дату'))
 def handle_add_date(message):
     if message.from_user.username in admins:
@@ -126,63 +125,53 @@ def process_delete_file(message, all_files):
 @bot.message_handler(content_types=["text"])
 def welcome(message):
     try:
-        if message.from_user.username in admins:
-            print(message)
-            if not message.text.startswith('!'):
-                dialog = get_dialog_from_db(message.chat.id)
-                if len(dialog) >= 20:
-                    dialog = dialog[20:]
-                # Получаем все даты из базы данных
-                all_dates = get_all_dates_from_db()
-                # Формируем строку с датами для добавления в prompt
-                dates_text = "\n".join(all_dates) if all_dates else "Нет доступных дат."
-                sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'Хуй в трусах', ты отвечаешь на вопросы по поводу компании ипо поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат: {dates_text}, если в списке нету даты, значит нету брони. Сегодняшние дата и время - {getDateAndTime(message)} "
-                                                   f"Если пользователь хочет забронировать день, то ты должен у него спросить хочет ли он забронировать, после положительного ответа отправляй ему именно этот текст, никак не меняя его: 'Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним.' Но твоя основная роль информировать пользователя о наличии свободных дней." 
-                                                f"Если пользователь хочет узнать информацию о компании,то ты ему рассказываешь про компанию, так же ты в конце будешь должен ему отправить именно этот текст, никак не меняя его: 'Сейчас отправлю вам уточняющие видео и презентации про компанию'", True, dialog)
-                print("-" * 80)
-                print(dates_text)
-                dialog.append({"role": "user", "message": message.text})
-                dialog.append({"role": "assistant", "message": sgen_text})
-                save_dialog_to_db(message.chat.id, dialog)
-                print("-" * 80)
-                print(dialog)
-                bot.send_message(message.chat.id, sgen_text)
-                if "Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
-                    for admin in admins:
-                        bot.send_message(admin, f"Айди чата с пользователем : {message.chat.id}.\n"
-                                                f"Сообщение пользователя : {message.text}"
-                                                f"Чтобы ответить на это сообщение введите айди чата и ответное сообщение пользователю в таком формате:\n"
-                                                f"6086449054 Сообщение: Мы приняли ваш запрос 19 ноября забронировано, можете отправить дополнительную информацию.")
-
-
-                if "Сейчас отправлю вам уточняющие видео и презентации про компанию" in sgen_text:
-
-
-                    try:
-                        presentations = get_presentations()
-                        for presentation in presentations:
-                            with open(presentation, 'rb') as file:
-                                bot.send_document(message.chat.id, file)
-                    except Exception as e:
-                        print(f"Error sending presentations: {e}")
-                        bot.send_message(message.chat.id, "Произошла ошибка при отправке презентаций.")
-                    try:
-                        videos = get_videos()
-                        for video in videos:
-                            with open(video, 'rb') as file:
-                                bot.send_video(message.chat.id, file)
-                    except Exception as e:
-                        print(f"Error sending videos: {e}")
-                        bot.send_message(message.chat.id, "Произошла ошибка при отправке видео.")
-        else:
-            print("FOR ADMINS")
-
+        print(message)
+        if not message.text.startswith('!'):
+            dialog = get_dialog_from_db(message.chat.id)
+            if len(dialog) >= 20:
+                dialog = dialog[20:]
+            # Получаем все даты из базы данных
+            all_dates = get_all_dates_from_db()
+            # Формируем строку с датами для добавления в prompt
+            dates_text = "\n".join(all_dates) if all_dates else "Нет доступных дат."
+            sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'Хуй в трусах', ты отвечаешь на вопросы по поводу компании ипо поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат: {dates_text}, если в списке нету даты, значит нету брони. Сегодняшние дата и время - {getDateAndTime(message)} "
+                                               f"Если пользователь хочет забронировать день, то ты должен у него спросить хочет ли он забронировать, после положительного ответа отправляй ему именно этот текст, никак не меняя его: 'Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним.' Но твоя основная роль информировать пользователя о наличии свободных дней." 
+                                            f"Если пользователь хочет узнать информацию о компании,то ты ему рассказываешь про компанию, так же ты в конце будешь должен ему отправить именно этот текст, никак не меняя его: 'Сейчас отправлю вам уточняющие видео и презентации про компанию'", True, dialog)
+            print("-" * 80)
+            print(dates_text)
+            dialog.append({"role": "user", "message": message.text})
+            dialog.append({"role": "assistant", "message": sgen_text})
+            save_dialog_to_db(message.chat.id, dialog)
+            print("-" * 80)
+            print(dialog)
+            bot.send_message(message.chat.id, sgen_text)
+            if "Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
+                for admin in admins:
+                    bot.send_message(admin, f"Айди чата с пользователем : {message.chat.id}.\n"
+                                            f"Сообщение пользователя : {message.text}"
+                                            f"Чтобы ответить на это сообщение введите айди чата и ответное сообщение пользователю в таком формате:\n"
+                                            f"6086449054 Сообщение: Мы приняли ваш запрос 19 ноября забронировано, можете отправить дополнительную информацию.")
+            if "Сейчас отправлю вам уточняющие видео и презентации про компанию" in sgen_text:
+                try:
+                    presentations = get_presentations()
+                    for presentation in presentations:
+                        with open(presentation, 'rb') as file:
+                            bot.send_document(message.chat.id, file)
+                except Exception as e:
+                    print(f"Error sending presentations: {e}")
+                    bot.send_message(message.chat.id, "Произошла ошибка при отправке презентаций.")
+                try:
+                    videos = get_videos()
+                    for video in videos:
+                        with open(video, 'rb') as file:
+                            bot.send_video(message.chat.id, file)
+                except Exception as e:
+                    print(f"Error sending videos: {e}")
+                    bot.send_message(message.chat.id, "Произошла ошибка при отправке видео.")
     except TypeError as e:
         error_text = e.args[0]
         print("-" * 80)
         print(error_text)
-        bot.send_message(message.chat.id, error_text)
-        bot.send_message(message.chat.id, "Вот ошибка, которая вышла")
 
 
 if __name__ == "__main__":

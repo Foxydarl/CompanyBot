@@ -12,7 +12,9 @@ def createDataBase(self):
         CREATE TABLE IF NOT EXISTS dates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
-            time TEXT
+            time TEXT,
+            socialNetwork TEXT NOT NULL,
+            userId TEXT NOT NULL
         )
     ''')
     cursor.execute('''
@@ -29,6 +31,14 @@ def createDataBase(self):
                 userId TEXT
             )
         ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telegramChatId TEXT DEFAULT NULL,
+            whatsappPhoneNumber TEXT DEFAULT NULL,
+            instagramUserId TEXT DEFAULT NULL
+        )
+    ''')
     conn.commit()
 
 def save_data_to_db(data):
