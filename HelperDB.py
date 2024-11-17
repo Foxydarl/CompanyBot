@@ -26,10 +26,10 @@ def createDataBase(self):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegramChatId TEXT DEFAULT NULL,
-            telegramUserId TEXT DEFAULT NULL,
-            whatsappPhoneNumber TEXT DEFAULT NULL,
-            instagramUserId TEXT DEFAULT NULL,
+            telegramChatId TEXT UNIQUE DEFAULT NULL,
+            telegramUserId TEXT UNIQUE DEFAULT NULL,
+            whatsappPhoneNumber TEXT UNIQUE DEFAULT NULL,
+            instagramUserId TEXT UNIQUE DEFAULT NULL,
             waiting TEXT DEFAULT "False"
         )
     ''')
@@ -116,8 +116,14 @@ def save_dialog_to_db(user_id, dialog_history):
     conn.commit()
 
 def add_user(message):
-    cursor.execute(f"INSERT INTO users (telegramChatId, telegramUserId) VALUES({message.chat.id}, {message.from_user.username}) ")
-    conn.commit()
+    try:
+        cursor.execute(
+        "INSERT INTO users (telegramChatId, telegramUserId) VALUES (?, ?)",
+        (message.chat.id, message.from_user.username)
+        )
+        conn.commit()
+    except sqlite3.IntegrityError as e:
+        e = e
 
 def change_waiting_flag_true(chatId):
     cursor.execute("UPDATE users SET waiting = 'True' WHERE telegramChatId = ?", (chatId,))

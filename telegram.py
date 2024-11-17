@@ -14,6 +14,7 @@ headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2V
 
 bot = telebot.TeleBot(token)
 admins = ['amida_f']
+adminsChatId = ['1779183640']
 
 #'f4est_f',
 createDataBase("Def")
@@ -155,9 +156,9 @@ def welcome(message):
             bot.send_message(message.chat.id, sgen_text)
             if "Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
                 change_waiting_flag_true(message.chat.id)
-                for admin in admins:
+                for admin in adminsChatId:
                     bot.send_message(admin, f"Айди чата с пользователем : {message.chat.id}.\n"
-                                            f"Сообщение пользователя : {message.text}"
+                                            f"Сообщение пользователя : {message.text}\n"
                                             f"Чтобы ответить на это сообщение введите айди чата и ответное сообщение пользователю в таком формате:\n"
                                             f"6086449054 Сообщение: Мы приняли ваш запрос 19 ноября забронировано, можете отправить дополнительную информацию.")
             elif "Сейчас отправлю вам уточняющие видео и презентации про компанию" in sgen_text:
