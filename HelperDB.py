@@ -19,24 +19,18 @@ def createDataBase(self):
     ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS dialogs (
-            user_id INTEGER,
-            dialog_history TEXT,
-            PRIMARY KEY (user_id)
+            user_id INTEGER PRIMARY KEY,
+            dialog_history TEXT
         )
     ''')
-    cursor.execute('''
-            CREATE TABLE IF NOT EXISTS admins (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                chatId TEXT UNIQUE,
-                userId TEXT
-            )
-        ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             telegramChatId TEXT DEFAULT NULL,
+            telegramUserId TEXT DEFAULT NULL,
             whatsappPhoneNumber TEXT DEFAULT NULL,
-            instagramUserId TEXT DEFAULT NULL
+            instagramUserId TEXT DEFAULT NULL,
+            waiting TEXT DEFAULT "False"
         )
     ''')
     conn.commit()
@@ -121,24 +115,20 @@ def save_dialog_to_db(user_id, dialog_history):
     )
     conn.commit()
 
-def is_chat_id_exist(chat_id):
-    connection = sqlite3.connect('bot_database.db')
-    cursor = connection.cursor()
+def add_user(message):
+    cursor.execute(f"INSERT INTO users (telegramChatId, telegramUserId) VALUES({message.chat.id}, {message.from_user.username}) ")
+    conn.commit()
 
-    cursor.execute("SELECT EXISTS(SELECT 1 FROM admins WHERE chat_id = ?)", (chat_id,))
-    exists = cursor.fetchone()[0]
+def change_waiting_flag_true(chatId):
+    cursor.execute("UPDATE users SET waiting = 'True' WHERE telegramChatId = ?", (chatId,))
+    conn.commit()
 
-    connection.close()
-    return bool(exists)
+def change_waiting_flag_false(chatId):
+    cursor.execute("UPDATE users SET waiting = 'False' WHERE telegramChatId = ?", (chatId,))
+    conn.commit()
 
-def add_admins_to_db(user_id):
-    try:
-        cursor.execute("INSERT INTO admins (chat_id, user_id) VALUES (?, ?)", (chat_id, user_id))
-        conn.commit()
-        print("Админ добавлен успешно.")
-    except sqlite3.IntegrityError:
-        print("Этот chat_id уже существует в базе данных.")
-    finally:
-        conn.close()
-
+def if_user_waiting_admin(message):
+    cursor.execute("SELECT * FROM users WHERE waiting = 'True'", (message,))
+    print(cursor.fetchone())
+    conn.commit()
 

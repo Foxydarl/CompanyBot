@@ -1,6 +1,4 @@
 import telebot
-
-
 from config import token
 from methods import *
 from HelperDB import *
@@ -15,8 +13,9 @@ dialog = []
 headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNDcyNDg2ODAtNjMzMC00MmJiLWE3NGItMjlkNTQyYjJiNzFhIiwidHlwZSI6ImFwaV90b2tlbiJ9.y_1ufwKGnOWSZqAFgDJO0h99aoOXZ9dUZDKyNBvw6ks"}
 
 bot = telebot.TeleBot(token)
-admins = ['f4est_f', 'amida_f']
+admins = ['amida_f']
 
+#'f4est_f',
 createDataBase("Def")
 
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-дату'))
@@ -91,6 +90,13 @@ def process_file_name(message, file, file_type):
     except Exception as e:
         bot.send_message(message.chat.id, f"Произошла ошибка при обработке файла: {e}")
         print(f"Error during file name processing: {e}")
+@bot.message_handler(func=lambda message: message.text.startswith('!остановить-чат'))
+def handle_stop_chat(message):
+    bot.send_message(message.chat.id, "Введите chatId с которым хотите завершить чат.")
+    bot.register_next_step_handler(message, process_stop_chat, message)
+def process_stop_chat(message):
+    change_waiting_flag_false(message.chatt.id)
+    bot.send_message(message.chat.id, f"Чат с {message.chatt.id} завершен.")
 
 @bot.message_handler(func=lambda message: message.text.startswith('!удалить-файл'))
 def handle_delete_file(message):
@@ -122,8 +128,10 @@ def process_delete_file(message, all_files):
         bot.send_message(message.chat.id, f"Произошла ошибка при удалении файла: {e}")
         print(f"Error during file deletion: {e}")
 
+
 @bot.message_handler(content_types=["text"])
 def welcome(message):
+    add_user(message)
     try:
         print(message)
         if not message.text.startswith('!'):
@@ -146,12 +154,13 @@ def welcome(message):
             print(dialog)
             bot.send_message(message.chat.id, sgen_text)
             if "Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
+                change_waiting_flag_true(message.chat.id)
                 for admin in admins:
                     bot.send_message(admin, f"Айди чата с пользователем : {message.chat.id}.\n"
                                             f"Сообщение пользователя : {message.text}"
                                             f"Чтобы ответить на это сообщение введите айди чата и ответное сообщение пользователю в таком формате:\n"
                                             f"6086449054 Сообщение: Мы приняли ваш запрос 19 ноября забронировано, можете отправить дополнительную информацию.")
-            if "Сейчас отправлю вам уточняющие видео и презентации про компанию" in sgen_text:
+            elif "Сейчас отправлю вам уточняющие видео и презентации про компанию" in sgen_text:
                 try:
                     presentations = get_presentations()
                     for presentation in presentations:
@@ -168,6 +177,11 @@ def welcome(message):
                 except Exception as e:
                     print(f"Error sending videos: {e}")
                     bot.send_message(message.chat.id, "Произошла ошибка при отправке видео.")
+        #else:
+            #if message.from_user.username in admins:
+                #if message.text.startswith() in
+
+
     except TypeError as e:
         error_text = e.args[0]
         print("-" * 80)
