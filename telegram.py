@@ -19,6 +19,14 @@ adminsChatId = ['1779183640']
 #'f4est_f',
 createDataBase("Def")
 
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-данные-о-кабинках'))
+def handle_add_cabins(message):
+    if message.from_user.username in admins:
+        bot.send_message(message.chat.id, "Введите информацию о кабинках")
+        bot.register_next_step_handler(message, add_cabin)
+def add_cabin(message):
+    write_file("cabins", message.text)
+
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-дату'))
 def handle_add_date(message):
     if message.from_user.username in admins:

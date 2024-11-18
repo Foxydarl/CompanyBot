@@ -12,7 +12,7 @@ def createDataBase(self):
         CREATE TABLE IF NOT EXISTS dates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
-            time TEXT,
+            cabin TEXT,
             socialNetwork TEXT NOT NULL,
             userId TEXT NOT NULL
         )

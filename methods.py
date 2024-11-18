@@ -46,3 +46,10 @@ def get_videos():
     folder_path = 'videos'
     return [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith(('.mp4', '.mov'))]
 
+def read_file(name_file):
+    myfile = open(f"{name_file}.txt", "r")
+    return myfile.read()
+
+def write_file(name_file, text):
+    myfile = open(f"{name_file}.txt", "w")
+    return myfile.write(text)
