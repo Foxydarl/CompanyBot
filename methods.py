@@ -23,7 +23,6 @@ def request_mess(msg, prompt, dialog_history):
     result = json.loads(response.text)
     print("-" * 80)
     print(result)
-
     return (result['openai']['generated_text'])
 
 def get_mess(msg, prompt, use_history, dialog_history):
@@ -53,3 +52,6 @@ def read_file(name_file):
 def write_file(name_file, text):
     myfile = open(f"{name_file}.txt", "w")
     return myfile.write(text)
+def get_images():
+    image_folder = 'styles'
+    return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
