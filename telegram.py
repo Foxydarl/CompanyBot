@@ -27,6 +27,18 @@ def handle_add_cabins(message):
 def add_cabin(message):
     write_file("cabins", message.text)
 
+@bot.message_handler(func=lambda message: message.text.startswith('!ожидающие ответа'))
+def show_waiting_users(message):
+    if message.from_user.username in admins:
+        waiting_users = get_waiting_users()
+        if waiting_users:
+            waiting_list = "\n".join(map(str, waiting_users))
+            bot.send_message(message.chat.id, f"Список ожидающих пользователей:\n{waiting_list}")
+        else:
+            bot.send_message(message.chat.id, "Нет пользователей, ожидающих ответа.")
+    else:
+        bot.send_message(message.chat.id, "У вас нет прав для выполнения этой команды.")
+
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-дату'))
 def handle_add_date(message):
     if message.from_user.username in admins:
@@ -164,11 +176,12 @@ def welcome(message):
             bot.send_message(message.chat.id, sgen_text)
             if "Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
                 change_waiting_flag_true(message.chat.id)
-                for admin in adminsChatId:
-                    bot.send_message(admin, f"Айди чата с пользователем : {message.chat.id}.\n"
-                                            f"Сообщение пользователя : {message.text}\n"
-                                            f"Чтобы ответить на это сообщение введите айди чата и ответное сообщение пользователю в таком формате:\n"
-                                            f"6086449054 Сообщение: Мы приняли ваш запрос 19 ноября забронировано, можете отправить дополнительную информацию.")
+                for admin_id in adminsChatId:
+                    bot.send_message(admin_id, f"Новый запрос от пользователя:\n"
+                                               f"Chat ID: {message.chat.id}\n"
+                                               f"Сообщение: {message.text}\n"
+                                               f"Для ответа используйте формат:\n"
+                                               f"<chat_id> Сообщение: <текст ответа>")
             elif "Сейчас отправлю вам уточняющие видео и презентации про компанию" in sgen_text:
                 try:
                     presentations = get_presentations()

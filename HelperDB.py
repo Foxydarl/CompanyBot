@@ -138,3 +138,7 @@ def if_user_waiting_admin(message):
     print(cursor.fetchone())
     conn.commit()
 
+def get_waiting_users():
+    cursor.execute("SELECT telegramChatId FROM users WHERE waiting = 'True'")
+    rows = cursor.fetchall()
+    return [row[0] for row in rows]
