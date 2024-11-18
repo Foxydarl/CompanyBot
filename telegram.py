@@ -27,7 +27,7 @@ def handle_add_cabins(message):
 def add_cabin(message):
     write_file("cabins", message.text)
 
-@bot.message_handler(func=lambda message: message.text.startswith('!ожидающие ответа'))
+@bot.message_handler(func=lambda message: message.text.startswith('!ожидающие-ответа'))
 def show_waiting_users(message):
     if message.from_user.username in admins:
         waiting_users = get_waiting_users()
@@ -114,10 +114,10 @@ def process_file_name(message, file, file_type):
 @bot.message_handler(func=lambda message: message.text.startswith('!остановить-чат'))
 def handle_stop_chat(message):
     bot.send_message(message.chat.id, "Введите chatId с которым хотите завершить чат.")
-    bot.register_next_step_handler(message, process_stop_chat, message)
+    bot.register_next_step_handler(message, process_stop_chat)
 def process_stop_chat(message):
-    change_waiting_flag_false(message.chatt.id)
-    bot.send_message(message.chat.id, f"Чат с {message.chatt.id} завершен.")
+    change_waiting_flag_false(message.text)
+    bot.send_message(message.chat.id, f"Чат с {message.text} завершен.")
 
 @bot.message_handler(func=lambda message: message.text.startswith('!удалить-файл'))
 def handle_delete_file(message):
@@ -175,13 +175,31 @@ def welcome(message):
             print(dialog)
             bot.send_message(message.chat.id, sgen_text)
             if "Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
-                change_waiting_flag_true(message.chat.id)
+                user_id = message.chat.id
+                dialog_history = get_dialog_from_db(user_id)
+
+                # Форматируем последние 10 сообщений
+                if dialog_history:
+                    last_10_messages = dialog_history[-10:]
+                    formatted_history = "\n".join(
+                        [f"{entry['role']}: {entry['message']}" for entry in last_10_messages]
+                    )
+                else:
+                    formatted_history = "История сообщений отсутствует."
+
+                # Формируем текст уведомления
+                notification_text = (
+                    f"Новый запрос от пользователя:\n"
+                    f"Chat ID: {user_id}\n"
+                    f"Сообщение: {message.text}\n\n"
+                    f"Последние 10 сообщений:\n{formatted_history}\n\n"
+                    f"Для ответа используйте формат:\n"
+                    f"<chat_id> Сообщение: <текст ответа>"
+                )
+
+                # Отправляем уведомление каждому администратору
                 for admin_id in adminsChatId:
-                    bot.send_message(admin_id, f"Новый запрос от пользователя:\n"
-                                               f"Chat ID: {message.chat.id}\n"
-                                               f"Сообщение: {message.text}\n"
-                                               f"Для ответа используйте формат:\n"
-                                               f"<chat_id> Сообщение: <текст ответа>")
+                    bot.send_message(admin_id, notification_text)
             elif "Сейчас отправлю вам уточняющие видео и презентации про компанию" in sgen_text:
                 try:
                     presentations = get_presentations()
@@ -208,6 +226,28 @@ def welcome(message):
         error_text = e.args[0]
         print("-" * 80)
         print(error_text)
+
+@bot.message_handler(func=lambda message: message.from_user.username in admins)
+def handle_admin_reply(message):
+    try:
+        # Проверяем, соответствует ли сообщение формату
+        if "Сообщение:" in message.text:
+            parts = message.text.split("Сообщение:")
+            user_id = parts[0].strip()  # ID пользователя
+            reply_text = parts[1].strip()  # Текст сообщения
+
+            # Проверяем, что ID пользователя — это число
+            if user_id.isdigit():
+                user_id = int(user_id)
+                bot.send_message(user_id, f"Сообщение от администратора: {reply_text}")
+                bot.send_message(message.chat.id, f"Сообщение успешно отправлено пользователю {user_id}.")
+            else:
+                bot.send_message(message.chat.id, "Некорректный формат ID пользователя. Убедитесь, что это число.")
+        else:
+            bot.send_message(message.chat.id, "Пожалуйста, используйте формат: <user_id> Сообщение: <текст ответа>")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Произошла ошибка: {e}")
+        print(f"Error in handle_admin_reply: {e}")
 
 
 if __name__ == "__main__":

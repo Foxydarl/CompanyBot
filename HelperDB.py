@@ -11,10 +11,7 @@ def createDataBase(self):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS dates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT,
-            cabin TEXT,
-            socialNetwork TEXT NOT NULL,
-            userId TEXT NOT NULL
+            date TEXT
         )
     ''')
     cursor.execute('''
@@ -39,7 +36,7 @@ def save_data_to_db(data):
     """Сохранение данных в базу данных SQLite, с сортировкой по дате"""
     try:
         # Преобразуем строку в объект даты
-        date_obj = datetime.strptime(data, "%Y-%m-%d")  # Ожидаемый формат: YYYY-MM-DD
+        date_obj = datetime.datetime.strptime(data, "%Y-%m-%d")  # Ожидаемый формат: YYYY-MM-DD
     except ValueError:
         return "Неверный формат даты. Пожалуйста, используйте формат: YYYY-MM-DD"
 
