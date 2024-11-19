@@ -53,3 +53,4 @@ def read_file(name_file):
 def write_file(name_file, text):
     myfile = open(f"{name_file}.txt", "w")
     return myfile.write(text)
+

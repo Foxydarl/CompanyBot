@@ -139,3 +139,143 @@ def get_waiting_users():
     cursor.execute("SELECT telegramChatId FROM users WHERE waiting = 'True'")
     rows = cursor.fetchall()
     return [row[0] for row in rows]
+
+def add_column(column_name):
+    try:
+        cursor.execute(f"ALTER TABLE dates ADD COLUMN {column_name} TEXT DEFAULT 'free'")
+        conn.commit()
+        return f"✅ Колонка '{column_name}' успешно добавлена."
+    except sqlite3.OperationalError as e:
+        return f"⚠️ Ошибка: {e}"
+
+def remove_column(column_name):
+    try:
+        # Получаем список всех колонок в таблице
+        cursor.execute("PRAGMA table_info(dates)")
+        columns = [info[1] for info in cursor.fetchall()]
+
+        if column_name not in columns:
+            return f"⚠️ Колонка '{column_name}' не найдена."
+
+        # Создаем новый список колонок, исключив из него колонку, которую нужно удалить
+        columns.remove(column_name)
+
+        # Формируем строку с колонками для новой таблицы
+        columns_str = ", ".join(columns)
+
+        # Создаем новую временную таблицу с нужными колонками
+        cursor.execute(f"CREATE TABLE dates_temp AS SELECT {columns_str} FROM dates")
+        conn.commit()
+
+        # Удаляем старую таблицу
+        cursor.execute("DROP TABLE dates")
+        conn.commit()
+
+        # Переименовываем временную таблицу в оригинальное имя
+        cursor.execute("ALTER TABLE dates_temp RENAME TO dates")
+        conn.commit()
+
+        return f"✅ Колонка '{column_name}' успешно удалена."
+
+    except Exception as e:
+        return f"⚠️ Ошибка: {e}"
+
+def update_slot(date, column_name, status):
+    try:
+        cursor.execute(f"UPDATE dates SET {column_name} = ? WHERE date = ?", (status, date))
+        conn.commit()
+        return f"✅ Слот '{column_name}' на дату '{date}' обновлен на '{status}'."
+    except sqlite3.OperationalError as e:
+        return f"⚠️ Ошибка: {e}"
+
+def view_dates():
+    cursor.execute("SELECT * FROM dates")
+    rows = cursor.fetchall()
+    columns = [description[0] for description in cursor.description]
+
+    table = [columns] + rows
+    return table
+
+def book_slot(date, column_name):
+    try:
+        cursor.execute(f"SELECT {column_name} FROM dates WHERE date = ?", (date,))
+        status = cursor.fetchone()
+
+        if status and status[0] == "free":
+            cursor.execute(f"UPDATE dates SET {column_name} = 'booked' WHERE date = ?", (date,))
+            conn.commit()
+            return f"✅ Слот '{column_name}' на дату '{date}' успешно забронирован."
+        elif status:
+            return f"⚠️ Слот '{column_name}' на дату '{date}' уже занят."
+        else:
+            return f"⚠️ Дата '{date}' не найдена."
+    except sqlite3.OperationalError as e:
+        return f"⚠️ Ошибка: {e}"
+
+def format_table():
+    try:
+        # Получаем данные из таблицы
+        cursor.execute("SELECT * FROM dates")
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+
+        # Определяем ширину колонок для выравнивания
+        column_widths = [max(len(str(value)) for value in [col] + [row[idx] for row in rows]) for idx, col in enumerate(columns)]
+
+        # Формируем верхнюю границу таблицы
+        table = "┌" + "┬".join("─" * (w + 2) for w in column_widths) + "┐\n"
+
+        # Формируем заголовок таблицы
+        header = "│ " + " │ ".join(f"{col.ljust(column_widths[idx])}" for idx, col in enumerate(columns)) + " │\n"
+        table += header
+
+        # Добавляем разделитель между заголовком и данными
+        table += "├" + "┼".join("─" * (w + 2) for w in column_widths) + "┤\n"
+
+        # Формируем строки данных
+        for row in rows:
+            row_line = "│ " + " │ ".join(f"{str(value).ljust(column_widths[idx])}" for idx, value in enumerate(row)) + " │\n"
+            table += row_line
+
+        # Формируем нижнюю границу таблицы
+        table += "└" + "┴".join("─" * (w + 2) for w in column_widths) + "┘\n"
+
+        # Возвращаем результат в формате для Telegram
+        return f"📋 Таблица dates:\n```\n{table}```"
+    except Exception as e:
+        return f"⚠️ Ошибка: {e}"
+
+
+def check_dates_and_cabins():
+    try:
+        # Получаем все записи из таблицы dates
+        cursor.execute("SELECT * FROM dates")
+        rows = cursor.fetchall()
+
+        if not rows:
+            return "В расписании нет данных."
+
+        # Составляем список для формулировки ответа
+        response = ""
+
+        for row in rows:
+            date = row[1]  # Предположим, что дата вторая колонка (индекс 1)
+            columns = [desc[0] for desc in cursor.description][2:]  # Пропускаем `id` и `date`
+
+            # Статусы кабинок для текущей даты
+            statuses = {columns[idx]: value for idx, value in enumerate(row[2:])}
+
+            free = [k for k, v in statuses.items() if v == "free"]
+            occupied = [k for k, v in statuses.items() if v != "free"]
+
+            # Формируем ответ для текущей даты
+            response += f"На {date}:\n"
+            if free:
+                response += f"✅ Свободны: {', '.join(free)}\n"
+            if occupied:
+                response += f"❌ Заняты: {', '.join(occupied)}\n"
+
+        return response
+
+    except Exception as e:
+        return f"⚠️ Ошибка: {e}"

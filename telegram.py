@@ -15,11 +15,59 @@ headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2V
 bot = telebot.TeleBot(token)
 admins = ['amida_f']
 adminsChatId = ['1779183640']
+info_about_commands = ("Информация о командах:\n!добавить-колонку <название_продолжение>\n!удалить-колонку <название_продолжение>\n!обновить-слот <дата> <колонка> <статус>"
+                       "\n!показать-таблицу\n!забронировать <дата> <колонка>\n!добавить-данные-о-кабинках\n!ожидающие-ответа\n!добавить-дату\n!удалить-дату"
+                       "\n!добавить-файл\n!остановить-чат\n!остановить-чат")
 
 #'f4est_f',
 createDataBase("Def")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!добавить-данные-о-кабинках'))
+@bot.message_handler(func=lambda message: message.text.startswith('!показать-команды') and message.from_user.username in admins)
+def handle_add_column(message):
+    bot.send_message(message.chat.id, info_about_commands)
+
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-колонку') and message.from_user.username in admins)
+def handle_add_column(message):
+    try:
+        column_name = message.text.split(" ", 1)[1]
+        result = add_column(column_name)
+    except IndexError:
+        result = "⚠️ Используйте: !добавить-колонку <название_продолжение>"
+    bot.reply_to(message, result)
+
+@bot.message_handler(func=lambda message: message.text.startswith('!удалить-колонку') and message.from_user.username in admins)
+def handle_remove_column(message):
+    try:
+        column_name = message.text.split(" ", 1)[1]
+        result = remove_column(column_name)
+    except IndexError:
+        result = "⚠️ Используйте: !удалить-колонку <название_продолжение>"
+    bot.reply_to(message, result)
+
+@bot.message_handler(func=lambda message: message.text.startswith('!обновить-слот') and message.from_user.username in admins)
+def handle_update_slot(message):
+    try:
+        _, date, column_name, status = message.text.split(" ", 3)
+        result = update_slot(date, column_name, status)
+    except ValueError:
+        result = "⚠️ Используйте: !обновить-слот <дата> <колонка> <статус>"
+    bot.reply_to(message, result)
+
+@bot.message_handler(func=lambda message: message.text.startswith('!показать-таблицу') and message.from_user.username in admins)
+def handle_view_dates(message):
+    formatted_table = format_table()
+    bot.send_message(message.chat.id, formatted_table, parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: message.text.startswith('!забронировать') and message.from_user.username in admins)
+def handle_book_slot(message):
+    try:
+        _, date, column_name = message.text.split(" ", 2)
+        result = book_slot(date, column_name)
+    except ValueError:
+        result = "⚠️ Используйте: !забронировать <дата> <колонка>"
+    bot.reply_to(message, result)
+
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-данные-о-кабинках') and message.from_user.username in admins)
 def handle_add_cabins(message):
     if message.from_user.username in admins:
         bot.send_message(message.chat.id, "Введите информацию о кабинках")
@@ -27,7 +75,7 @@ def handle_add_cabins(message):
 def add_cabin(message):
     write_file("cabins", message.text)
 
-@bot.message_handler(func=lambda message: message.text.startswith('!ожидающие-ответа'))
+@bot.message_handler(func=lambda message: message.text.startswith('!ожидающие-ответа') and message.from_user.username in admins)
 def show_waiting_users(message):
     if message.from_user.username in admins:
         waiting_users = get_waiting_users()
@@ -39,7 +87,7 @@ def show_waiting_users(message):
     else:
         bot.send_message(message.chat.id, "У вас нет прав для выполнения этой команды.")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!добавить-дату'))
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-дату') and message.from_user.username in admins)
 def handle_add_date(message):
     if message.from_user.username in admins:
         data = message.text[len('!добавить-дату '):].strip()
@@ -55,7 +103,7 @@ def handle_add_date(message):
     else:
         bot.send_message(message.chat.id, "У вас нет прав для выполнения этой команды.")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!удалить-дату'))
+@bot.message_handler(func=lambda message: message.text.startswith('!удалить-дату') and message.from_user.username in admins)
 def handle_delete_date(message):
     if message.from_user.username in admins:
         data = message.text[len('!удалить-дату '):].strip()
@@ -67,7 +115,7 @@ def handle_delete_date(message):
     else:
         bot.send_message(message.chat.id, "У вас нет прав для выполнения этой команды.")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл'))
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл') and message.from_user.username in admins)
 def handle_add_file(message):
     bot.send_message(message.chat.id, "Пожалуйста, отправьте файл (презентацию или видео).")
     bot.register_next_step_handler(message, process_file)
@@ -111,7 +159,7 @@ def process_file_name(message, file, file_type):
     except Exception as e:
         bot.send_message(message.chat.id, f"Произошла ошибка при обработке файла: {e}")
         print(f"Error during file name processing: {e}")
-@bot.message_handler(func=lambda message: message.text.startswith('!остановить-чат'))
+@bot.message_handler(func=lambda message: message.text.startswith('!остановить-чат') and message.from_user.username in admins)
 def handle_stop_chat(message):
     bot.send_message(message.chat.id, "Введите chatId с которым хотите завершить чат.")
     bot.register_next_step_handler(message, process_stop_chat)
@@ -119,7 +167,7 @@ def process_stop_chat(message):
     change_waiting_flag_false(message.text)
     bot.send_message(message.chat.id, f"Чат с {message.text} завершен.")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!удалить-файл'))
+@bot.message_handler(func=lambda message: message.text.startswith('!удалить-файл') and message.from_user.username in admins)
 def handle_delete_file(message):
     presentations = get_presentations()
     videos = get_videos()
@@ -163,7 +211,7 @@ def welcome(message):
             all_dates = get_all_dates_from_db()
             # Формируем строку с датами для добавления в prompt
             dates_text = "\n".join(all_dates) if all_dates else "Нет доступных дат."
-            sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'Хуй в трусах', ты отвечаешь на вопросы по поводу компании ипо поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат: {dates_text}, если в списке нету даты, значит нету брони. Сегодняшние дата и время - {getDateAndTime(message)} "
+            sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'Хуй в трусах', ты отвечаешь на вопросы по поводу компании ипо поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат, а также колонок: {check_dates_and_cabins()}, если в списке нету даты, значит нету брони, а также пиши пользователю свободные кабинки в виде списка если дата свободна. Сегодняшние дата и время - {getDateAndTime(message)} "
                                                f"Если пользователь хочет забронировать день, то ты должен у него спросить хочет ли он забронировать, после положительного ответа отправляй ему именно этот текст, никак не меняя его: 'Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним.' Но твоя основная роль информировать пользователя о наличии свободных дней." 
                                             f"Если пользователь хочет узнать информацию о компании,то ты ему рассказываешь про компанию, так же ты в конце будешь должен ему отправить именно этот текст, никак не меняя его: 'Сейчас отправлю вам уточняющие видео и презентации про компанию'", True, dialog)
             print("-" * 80)
