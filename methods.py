@@ -2,6 +2,7 @@ import requests
 import json
 from datetime import datetime
 import os
+from HelperDB import *
 
 
 def request_mess(msg, prompt, dialog_history):
@@ -34,7 +35,7 @@ def get_mess(msg, prompt, use_history, dialog_history):
 
 
 def getDateAndTime(self):
-    return datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    return datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
 
 def get_presentations():
@@ -55,3 +56,25 @@ def write_file(name_file, text):
 def get_images():
     image_folder = 'styles'
     return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+def notify(message):
+    user_id = message.chat.id
+    dialog_history = get_dialog_from_db(user_id)
+    change_waiting_flag_true(user_id)
+    if dialog_history:
+        last_10_messages = dialog_history[-10:]
+        formatted_history = "\n".join(
+            [f"{entry['role']}: {entry['message']}" for entry in last_10_messages]
+        )
+    else:
+        formatted_history = "История сообщений отсутствует."
+
+    notification_text = (
+        f"Новый запрос от пользователя:\n"
+        f"Chat ID: {user_id}\n"
+        f"Сообщение: {message.text}\n\n"
+        f"Последние 10 сообщений:\n{formatted_history}\n\n"
+        f"Для ответа используйте формат:\n"
+        f"<chat_id> Сообщение: <текст ответа>"
+    )
+    return notification_text

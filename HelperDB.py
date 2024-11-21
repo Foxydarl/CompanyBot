@@ -5,13 +5,18 @@ import json
 conn = sqlite3.connect('dates.db', check_same_thread=False)
 cursor = conn.cursor()
 
-def createDataBase(self):
+def createDataBase():
 
-    # Создание таблицы для хранения дат, если она не существует
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS dates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT
+        )
+    ''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS admins(
+            chat_id INTEGER PRIMARY KEY UNIQUE,
+            username TEXT UNIQUE
         )
     ''')
     cursor.execute('''
@@ -32,27 +37,30 @@ def createDataBase(self):
     ''')
     conn.commit()
 
-def save_data_to_db(data):
+def save_data_to_db(date):
     """Сохранение данных в базу данных SQLite, с сортировкой по дате"""
     try:
-        # Преобразуем строку в объект даты
-        date_obj = datetime.datetime.strptime(data, "%Y-%m-%d")  # Ожидаемый формат: YYYY-MM-DD
+        date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%Y-%m-%d")
+
+        cursor.execute("PRAGMA table_info(dates)")
+        columns = [info[1] for info in cursor.fetchall()]
+
+        insert_columns = ", ".join(columns[1:])
+        placeholders = ", ".join(["?"] * len(columns[1:]))
+
+        values = [formatted_date] + ['free'] * (len(columns) - 2)
+
+        cursor.execute(f"INSERT INTO dates ({insert_columns}) VALUES ({placeholders})", values)
+        conn.commit()
+
+        return "✅ Дата успешно добавлена."
     except ValueError:
-        return "Неверный формат даты. Пожалуйста, используйте формат: YYYY-MM-DD"
-
-    # Преобразуем обратно в строку в формате YYYY-MM-DD для записи в базу
-    formatted_date = date_obj.strftime("%Y-%m-%d")
-
-    # Добавляем дату в таблицу
-    cursor.execute("INSERT INTO dates (date) VALUES (?)", (formatted_date,))
-    conn.commit()
-
-    # Теперь извлекаем все даты из базы, отсортированные по дате
-    cursor.execute("SELECT * FROM dates ORDER BY date ASC")
-    all_dates = cursor.fetchall()
-
-    # Возвращаем отсортированный список дат
-    return [date[1] for date in all_dates]
+        return "⚠️ Неверный формат даты. Пожалуйста, используйте формат: YYYY-MM-DD."
+    except sqlite3.IntegrityError:
+        return "⚠️ Такая дата уже существует."
+    except Exception as e:
+        return f"⚠️ Ошибка: {e}"
 
 
 def get_sorted_dates():
@@ -65,24 +73,19 @@ def get_sorted_dates():
 def delete_date_from_db(data):
     """Удаление даты из базы данных"""
     try:
-        # Преобразуем строку в объект даты
-        date_obj = datetime.strptime(data, "%Y-%m-%d")  # Ожидаемый формат: YYYY-MM-DD
+        date_obj = datetime.datetime.strptime(data, "%Y-%m-%d")
     except ValueError:
         return "Неверный формат даты. Пожалуйста, используйте формат: YYYY-MM-DD"
 
-    # Преобразуем обратно в строку в формате YYYY-MM-DD для удаления из базы
     formatted_date = date_obj.strftime("%Y-%m-%d")
 
-    # Проверяем, существует ли дата в базе
     cursor.execute("SELECT * FROM dates WHERE date = ?", (formatted_date,))
     if cursor.fetchone() is None:
         return "Дата не найдена в базе данных."
 
-    # Удаляем дату из базы
     cursor.execute("DELETE FROM dates WHERE date = ?", (formatted_date,))
     conn.commit()
 
-    # Проверим, была ли дата удалена
     cursor.execute("SELECT * FROM dates WHERE date = ?", (formatted_date,))
     if cursor.fetchone() is None:
         return "Дата успешно удалена."
@@ -100,12 +103,12 @@ def get_dialog_from_db(user_id):
     cursor.execute("SELECT dialog_history FROM dialogs WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
     if row:
-        return json.loads(row[0])  # Преобразование из JSON
+        return json.loads(row[0])
     return []
 
 def save_dialog_to_db(user_id, dialog_history):
     """Сохранение диалога в базу данных"""
-    dialog_json = json.dumps(dialog_history)  # Преобразование в JSON
+    dialog_json = json.dumps(dialog_history)
     cursor.execute(
         "INSERT OR REPLACE INTO dialogs (user_id, dialog_history) VALUES (?, ?)",
         (user_id, dialog_json)
@@ -150,28 +153,22 @@ def add_column(column_name):
 
 def remove_column(column_name):
     try:
-        # Получаем список всех колонок в таблице
         cursor.execute("PRAGMA table_info(dates)")
         columns = [info[1] for info in cursor.fetchall()]
 
         if column_name not in columns:
             return f"⚠️ Колонка '{column_name}' не найдена."
 
-        # Создаем новый список колонок, исключив из него колонку, которую нужно удалить
         columns.remove(column_name)
 
-        # Формируем строку с колонками для новой таблицы
         columns_str = ", ".join(columns)
 
-        # Создаем новую временную таблицу с нужными колонками
         cursor.execute(f"CREATE TABLE dates_temp AS SELECT {columns_str} FROM dates")
         conn.commit()
 
-        # Удаляем старую таблицу
         cursor.execute("DROP TABLE dates")
         conn.commit()
 
-        # Переименовываем временную таблицу в оригинальное имя
         cursor.execute("ALTER TABLE dates_temp RENAME TO dates")
         conn.commit()
 
@@ -214,33 +211,25 @@ def book_slot(date, column_name):
 
 def format_table():
     try:
-        # Получаем данные из таблицы
         cursor.execute("SELECT * FROM dates")
         rows = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
 
-        # Определяем ширину колонок для выравнивания
         column_widths = [max(len(str(value)) for value in [col] + [row[idx] for row in rows]) for idx, col in enumerate(columns)]
 
-        # Формируем верхнюю границу таблицы
         table = "┌" + "┬".join("─" * (w + 2) for w in column_widths) + "┐\n"
 
-        # Формируем заголовок таблицы
         header = "│ " + " │ ".join(f"{col.ljust(column_widths[idx])}" for idx, col in enumerate(columns)) + " │\n"
         table += header
 
-        # Добавляем разделитель между заголовком и данными
         table += "├" + "┼".join("─" * (w + 2) for w in column_widths) + "┤\n"
 
-        # Формируем строки данных
         for row in rows:
             row_line = "│ " + " │ ".join(f"{str(value).ljust(column_widths[idx])}" for idx, value in enumerate(row)) + " │\n"
             table += row_line
 
-        # Формируем нижнюю границу таблицы
         table += "└" + "┴".join("─" * (w + 2) for w in column_widths) + "┘\n"
 
-        # Возвращаем результат в формате для Telegram
         return f"📋 Таблица dates:\n```\n{table}```"
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
@@ -248,27 +237,23 @@ def format_table():
 
 def check_dates_and_cabins():
     try:
-        # Получаем все записи из таблицы dates
         cursor.execute("SELECT * FROM dates")
         rows = cursor.fetchall()
 
         if not rows:
             return "В расписании нет данных."
 
-        # Составляем список для формулировки ответа
         response = ""
 
         for row in rows:
-            date = row[1]  # Предположим, что дата вторая колонка (индекс 1)
-            columns = [desc[0] for desc in cursor.description][2:]  # Пропускаем `id` и `date`
+            date = row[1]
+            columns = [desc[0] for desc in cursor.description][2:]
 
-            # Статусы кабинок для текущей даты
             statuses = {columns[idx]: value for idx, value in enumerate(row[2:])}
 
             free = [k for k, v in statuses.items() if v == "free"]
             occupied = [k for k, v in statuses.items() if v != "free"]
 
-            # Формируем ответ для текущей даты
             response += f"На {date}:\n"
             if free:
                 response += f"✅ Свободны: {', '.join(free)}\n"
@@ -277,5 +262,119 @@ def check_dates_and_cabins():
 
         return response
 
+    except Exception as e:
+        return f"⚠️ Ошибка: {e}"
+
+def clear_dialog(user_id):
+    """Удаление диалога определённого пользователя из базы данных."""
+    try:
+        cursor.execute("DELETE FROM dialogs WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return f"✅ Диалог для пользователя с ID {user_id} успешно очищен."
+    except Exception as e:
+        return f"⚠️ Ошибка при очистке диалога: {e}"
+
+def add_admin(username):
+    cursor.execute("SELECT telegramChatId FROM users WHERE telegramUserId = ?", (username,))
+    result = cursor.fetchone()
+    chat_id = result[0]
+    cursor.execute("INSERT INTO admins (chat_id, username) VALUES (?, ?)", (chat_id, username))
+    conn.commit()
+    return f"Админ с username {username} и chatId {chat_id} добавлен."
+
+def delete_admin(username):
+    cursor.execute("DELETE FROM admins WHERE username = ?", (username,))
+    conn.commit()
+    return f"Админ с username {username} удален."
+
+def check_admins():
+    cursor.execute("SELECT chat_id FROM admins")
+    chat_ids = [row[0] for row in cursor.fetchall()]
+    cursor.execute("SELECT username FROM admins")
+    usernames = [row[0] for row in cursor.fetchall()]
+    return [chat_ids, usernames]
+
+def check_waiting_status(chatId):
+    try:
+        cursor.execute("SELECT waiting FROM users WHERE telegramChatId = ?", (chatId,))
+        result = cursor.fetchone()
+
+        waiting_status = result[0]
+        if waiting_status == "True":
+            return True
+        else:
+            return False
+    except Exception as e:
+        return f"⚠️ Ошибка при проверке статуса: {e}"
+
+def format_admins_table():
+    try:
+        # Извлечение всех администраторов из базы данных
+        cursor.execute("SELECT * FROM admins")
+        rows = cursor.fetchall()
+
+        if not rows:
+            return "В базе данных нет администраторов."
+
+        columns = [desc[0] for desc in cursor.description]  # Получаем названия колонок
+
+        # Вычисление ширины колонок для правильного отображения
+        column_widths = [max(len(str(value)) for value in [col] + [row[idx] for row in rows]) for idx, col in enumerate(columns)]
+
+        # Строим строку таблицы
+        table = "┌" + "┬".join("─" * (w + 2) for w in column_widths) + "┐\n"
+
+        # Добавляем заголовок
+        header = "│ " + " │ ".join(f"{col.ljust(column_widths[idx])}" for idx, col in enumerate(columns)) + " │\n"
+        table += header
+
+        # Добавляем разделительную линию
+        table += "├" + "┼".join("─" * (w + 2) for w in column_widths) + "┤\n"
+
+        # Добавляем строки данных
+        for row in rows:
+            row_line = "│ " + " │ ".join(f"{str(value).ljust(column_widths[idx])}" for idx, value in enumerate(row)) + " │\n"
+            table += row_line
+
+        # Добавляем нижнюю границу таблицы
+        table += "└" + "┴".join("─" * (w + 2) for w in column_widths) + "┘\n"
+
+        return f"📋 Таблица администраторов:\n```\n{table}```"
+    except Exception as e:
+        return f"⚠️ Ошибка: {e}"
+
+def format_users_table():
+    try:
+        # Извлечение всех пользователей из базы данных
+        cursor.execute("SELECT * FROM users")
+        rows = cursor.fetchall()
+
+        if not rows:
+            return "В базе данных нет пользователей."
+
+        columns = [desc[0] for desc in cursor.description]  # Получаем названия колонок
+
+        # Вычисление ширины колонок для правильного отображения
+        column_widths = [max(len(str(value)) for value in [col] + [row[idx] for row in rows]) for idx, col in enumerate(columns)]
+
+        # Строим строку таблицы
+        table = "┌" + "┬".join("─" * (w + 2) for w in column_widths) + "┐\n"
+
+        # Добавляем заголовок
+        header = "│ " + " │ ".join(f"{col.ljust(column_widths[idx])}" for idx, col in enumerate(columns)) + " │\n"
+        table += header
+
+        # Добавляем разделительную линию
+        table += "├" + "┼".join("─" * (w + 2) for w in column_widths) + "┤\n"
+
+        # Добавляем строки данных
+        for row in rows:
+            row_line = "│ " + " │ ".join(f"{str(value).ljust(column_widths[idx])}" for idx, value in enumerate(row)) + " │\n"
+            table += row_line
+
+        # Добавляем нижнюю границу таблицы
+        table += "└" + "┴".join("─" * (w + 2) for w in column_widths) + "┘\n"
+
+        return f"📋 Таблица пользователей:\n```\n{table}```"
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
