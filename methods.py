@@ -3,7 +3,25 @@ import json
 from datetime import datetime
 import os
 from HelperDB import *
+from googletrans import Translator
 
+translator = Translator()
+
+def detect_language(text):
+    detected = translator.detect(text)
+    return detected.lang
+
+def translate_to_russian(text):
+    """Перевод текста на русский язык."""
+    return translator.translate(text, src='auto', dest='ru').text
+
+def translate_to_kazakh(text):
+    """Перевод текста на казахский язык."""
+    return translator.translate(text, src='auto', dest='kk').text
+
+def translate_to_english(text):
+    """Перевод текста на английский язык."""
+    return translator.translate(text, src='auto', dest='en').text
 
 def request_mess(msg, prompt, dialog_history):
     url = "https://api.edenai.run/v2/text/chat"
@@ -24,8 +42,13 @@ def request_mess(msg, prompt, dialog_history):
     result = json.loads(response.text)
     print("-" * 80)
     print(result)
-    return (result['openai']['generated_text'])
-
+    detect = detect_language(msg)
+    if detect == "en":
+        return translate_to_english((result['openai']['generated_text']))
+    elif detect == "kk":
+        return translate_to_kazakh((result['openai']['generated_text']))
+    else:
+        return (result['openai']['generated_text'])
 def get_mess(msg, prompt, use_history, dialog_history):
     if use_history == False:
         dialog_history = []
