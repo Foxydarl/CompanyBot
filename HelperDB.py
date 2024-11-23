@@ -20,6 +20,12 @@ def createDataBase():
         )
     ''')
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS qeusAnsw(
+                question TEXT UNIQUE,
+                answer TEXT
+            )
+    ''')
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS dialogs (
             user_id INTEGER PRIMARY KEY,
             dialog_history TEXT
@@ -378,3 +384,34 @@ def format_users_table():
         return f"📋 Таблица пользователей:\n```\n{table}```"
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
+
+def add_question_answer(question, answer):
+    try:
+        cursor.execute('INSERT INTO qeusAnsw (question, answer) VALUES (?, ?)', (question, answer))
+        conn.commit()
+        return "Вопрос и ответ успешно добавлены."
+    except sqlite3.IntegrityError:
+        return "Такой вопрос уже существует."
+
+def delete_question(question):
+    cursor.execute('DELETE FROM qeusAnsw WHERE question = ?', (question,))
+    conn.commit()
+    if cursor.rowcount > 0:
+        return "Вопрос успешно удалён."
+    else:
+        return "Такой вопрос не найден."
+
+def get_table_as_string():
+    cursor.execute('SELECT question, answer FROM qeusAnsw')
+    rows = cursor.fetchall()
+    result = ""
+    for question, answer in rows:
+        result += f"Вопрос:\n{question}\nОтвет:\n{answer}\n\n"
+    return result if result else "Таблица пуста."
+
+def get_table_as_lists():
+    cursor.execute('SELECT question, answer FROM qeusAnsw')
+    rows = cursor.fetchall()
+    questions = [row[0] for row in rows]
+    answers = [row[1] for row in rows]
+    return questions, answers

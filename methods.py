@@ -101,3 +101,11 @@ def notify(message):
         f"<chat_id> Сообщение: <текст ответа>"
     )
     return notification_text
+
+def create_str_ans():
+    que, ans = get_table_as_lists()
+    print(que, ans)
+    st = ""
+    for i,k in zip(que,ans):
+        st += f"Если пользователь интересуется про {i} отвечай ему {k}"
+    return st

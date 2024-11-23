@@ -7,24 +7,57 @@ if not os.path.exists('presentations'):
     os.makedirs('presentations')
 if not os.path.exists('videos'):
     os.makedirs('videos')
+createDataBase()
+headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNDcyNDg2ODAtNjMzMC00MmJiLWE3NGItMjlkNTQyYjJiNzFhIiwidHlwZSI6ImFwaV90b2tlbiJ9.y_1ufwKGnOWSZqAFgDJO0h99aoOXZ9dUZDKyNBvw6ks"}
+bot = telebot.TeleBot(token)
+
 
 dialog = []
-headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNDcyNDg2ODAtNjMzMC00MmJiLWE3NGItMjlkNTQyYjJiNzFhIiwidHlwZSI6ImFwaV90b2tlbiJ9.y_1ufwKGnOWSZqAFgDJO0h99aoOXZ9dUZDKyNBvw6ks"}
-
-bot = telebot.TeleBot(token)
-info_about_commands = ("Информация о командах:\n!пользователи\n!админы\n!удалить-админа\n!добавить-админа\n!добавить-колонку <название_продолжение>\n!удалить-колонку <название_продолжение>\n!обновить-слот <дата> <колонка> <статус>"
+info_about_commands = ("Информация о командах:\n!показать-вопросы\n!удалить-вопрос-ответ ?вопрос\n!добавить-вопрос-ответ ?вопрос !ответ\n!пользователи\n!админы\n!удалить-админа\n!добавить-админа\n!добавить-колонку <название_продолжение>\n!удалить-колонку <название_продолжение>\n!обновить-слот <дата> <колонка> <статус>"
                        "\n!показать-таблицу\n!забронировать <дата> <колонка>\n!добавить-данные-о-кабинках\n!ожидающие-ответа\n!добавить-дату\n!удалить-дату"
                        "\n!добавить-файл\n!остановить-чат\n!остановить-чат")
+question_answer = create_str_ans()
 
-createDataBase()
+
+@bot.message_handler(func=lambda message: message.text.startswith('!показать-вопросы') and not message.from_user.username in check_admins()[1])
+def handle_get_que(message):
+    try:
+        bot.send_message(message.chat.id, get_table_as_string())
+    except Exception:
+        bot.send_message(message.chat.id, "⚠️ Не получилось удалить вопрос-ответ.")
+
+@bot.message_handler(func=lambda message: message.text.startswith('!удалить-вопрос-ответ') and not message.from_user.username in check_admins()[1])
+def handle_del_que_ans(message):
+    try:
+        split = message.text.split
+        if len(split) > 3:
+            bot.send_message(message.chat.id, "Напишите в таком формате !удалить-вопрос-ответ ?вопрос")
+        else:
+            question = split[1]
+            bot.send_message(message.chat.id, add_question_answer(question))
+    except Exception:
+        bot.send_message(message.chat.id, "⚠️ Не получилось удалить вопрос-ответ.")
+
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-вопрос-ответ') and not message.from_user.username in check_admins()[1])
+def handle_add_que_ans(message):
+    try:
+        split = message.text.split
+        if len(split) > 3:
+            bot.send_message(message.chat.id, "Напишите в таком формате !добавить-вопрос-ответ ?вопрос !ответ")
+        else:
+            question = split[1]
+            answer = split[2]
+            bot.send_message(message.chat.id, add_question_answer(question, answer))
+    except Exception:
+        bot.send_message(message.chat.id, "⚠️ Не получилось добавить вопрос-ответ.")
 
 @bot.message_handler(func=lambda message: message.text.startswith('!пользователи') and message.from_user.username in check_admins()[1])
-def handle_stop_chat(message):
+def handle_users(message):
     formatted_table = format_users_table()
     bot.send_message(message.chat.id, formatted_table, parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.text.startswith('!админы') and message.from_user.username in check_admins()[1])
-def handle_stop_chat(message):
+def handle_admins(message):
     formatted_table = format_admins_table()
     bot.send_message(message.chat.id, formatted_table, parse_mode="Markdown")
 
@@ -326,7 +359,8 @@ def welcome(message):
                                                            f"Тексты про компанию: Компания, где технологии искусственного интеллекта превращают идеи в инновации и открывают новые возможности для вашего бизнеса. Мы создаем будущее уже сегодня!, второй текст:"
                                                            f"Our software continues to connect with users worldwide! At our client’s event in Kazakhstan, we introduced our AI Photobooth software in partnership with @ai_fotokz ."
                                                            f"Если пользователь хочет забронировать день, то ты должен у него спросить хочет ли он забронировать, после положительного ответа отправляй ему именно этот текст никак не меняя его:Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним,если хотите завершить чат с админом введите !завершить-чат. Но твоя основная роль информировать пользователя о наличии свободных дней.'"
-                                                           f"Если пользователь хочет узнать информацию о компании,то ты ему рассказываешь про компанию, так же спрашиваешь хочет ли пользователь получить фото, видео и презентации о компании, если он скажет, что хочет, то ты будешь должен ему отправить именно этот текст, никак не меняя его : 'Сейчас отправлю вам уточняющие видео и презентации про компанию'", True, dialog1)
+                                                           f"Если пользователь хочет узнать информацию о компании,то ты ему рассказываешь про компанию, так же спрашиваешь хочет ли пользователь получить фото, видео и презентации о компании, если он скажет, что хочет, то ты будешь должен ему отправить именно этот текст, никак не меняя его : 'Сейчас отправлю вам уточняющие видео и презентации про компанию'"
+                                                           f"{question_answer}", True, dialog1)
                 print("-" * 80)
                 print(dates_text)
                 dialog1.append({"role": "user", "message": message.text})
