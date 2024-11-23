@@ -17,36 +17,33 @@ info_about_commands = ("Информация о командах:\n!показа
                        "\n!показать-таблицу\n!забронировать <дата> <колонка>\n!добавить-данные-о-кабинках\n!ожидающие-ответа\n!добавить-дату\n!удалить-дату"
                        "\n!добавить-файл\n!остановить-чат\n!остановить-чат")
 question_answer = create_str_ans()
+print(question_answer)
 
-
-@bot.message_handler(func=lambda message: message.text.startswith('!показать-вопросы') and not message.from_user.username in check_admins()[1])
+@bot.message_handler(func=lambda message: message.text.startswith('!показать-вопросы') and message.from_user.username in check_admins()[1])
 def handle_get_que(message):
     try:
         bot.send_message(message.chat.id, get_table_as_string())
     except Exception:
         bot.send_message(message.chat.id, "⚠️ Не получилось удалить вопрос-ответ.")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!удалить-вопрос-ответ') and not message.from_user.username in check_admins()[1])
+@bot.message_handler(func=lambda message: message.text.startswith('!удалить-вопрос-ответ') and message.from_user.username in check_admins()[1])
 def handle_del_que_ans(message):
     try:
-        split = message.text.split
-        if len(split) > 3:
-            bot.send_message(message.chat.id, "Напишите в таком формате !удалить-вопрос-ответ ?вопрос")
-        else:
-            question = split[1]
-            bot.send_message(message.chat.id, add_question_answer(question))
+        content = message.text[len('!удалить-вопрос-ответ'):].strip()
+        if '?' in content:
+            question_part = content.strip('?').strip()
+            bot.send_message(message.chat.id, delete_question(question_part))
     except Exception:
         bot.send_message(message.chat.id, "⚠️ Не получилось удалить вопрос-ответ.")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!добавить-вопрос-ответ') and not message.from_user.username in check_admins()[1])
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-вопрос-ответ') and message.from_user.username in check_admins()[1])
 def handle_add_que_ans(message):
     try:
-        split = message.text.split
-        if len(split) > 3:
-            bot.send_message(message.chat.id, "Напишите в таком формате !добавить-вопрос-ответ ?вопрос !ответ")
-        else:
-            question = split[1]
-            answer = split[2]
+        content = message.text[len('!добавить-вопрос-ответ'):].strip()
+        if '?' in content and '!' in content:
+            question_part, answer = content.split('!', 1)
+            question = question_part.strip('?').strip()
+            answer = answer.strip()
             bot.send_message(message.chat.id, add_question_answer(question, answer))
     except Exception:
         bot.send_message(message.chat.id, "⚠️ Не получилось добавить вопрос-ответ.")
