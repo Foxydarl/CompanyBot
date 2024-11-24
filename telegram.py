@@ -14,16 +14,45 @@ if not os.path.exists('presentations'):
     os.makedirs('presentations')
 if not os.path.exists('videos'):
     os.makedirs('videos')
-
-dialog = []
+createDataBase()
 headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNDcyNDg2ODAtNjMzMC00MmJiLWE3NGItMjlkNTQyYjJiNzFhIiwidHlwZSI6ImFwaV90b2tlbiJ9.y_1ufwKGnOWSZqAFgDJO0h99aoOXZ9dUZDKyNBvw6ks"}
 
 bot = telebot.TeleBot(token)
-info_about_commands = ("Информация о командах:\n!пользователи\n!админы\n!удалить-админа\n!добавить-админа\n!добавить-колонку <название_продолжение>\n!удалить-колонку <название_продолжение>\n!обновить-слот <дата> <колонка> <статус>"
+dialog = []
+info_about_commands = ("Информация о командах:\n!показать-вопросы\n!удалить-вопрос-ответ ?вопрос\n!добавить-вопрос-ответ ?вопрос !ответ\n!пользователи\n!админы\n!удалить-админа\n!добавить-админа\n!добавить-колонку <название_продолжение>\n!удалить-колонку <название_продолжение>\n!обновить-слот <дата> <колонка> <статус>"
                        "\n!показать-таблицу\n!забронировать <дата> <колонка>\n!добавить-данные-о-кабинках\n!ожидающие-ответа\n!добавить-дату\n!удалить-дату"
                        "\n!добавить-файл\n!остановить-чат\n!остановить-чат")
+question_answer = create_str_ans()
+print(question_answer)
 
-createDataBase()
+@bot.message_handler(func=lambda message: message.text.startswith('!показать-вопросы') and message.from_user.username in check_admins()[1])
+def handle_get_que(message):
+    try:
+        bot.send_message(message.chat.id, get_table_as_string())
+    except Exception:
+        bot.send_message(message.chat.id, "⚠️ Не получилось удалить вопрос-ответ.")
+
+@bot.message_handler(func=lambda message: message.text.startswith('!удалить-вопрос-ответ') and message.from_user.username in check_admins()[1])
+def handle_del_que_ans(message):
+    try:
+        content = message.text[len('!удалить-вопрос-ответ'):].strip()
+        if '?' in content:
+            question_part = content.strip('?').strip()
+            bot.send_message(message.chat.id, delete_question(question_part))
+    except Exception:
+        bot.send_message(message.chat.id, "⚠️ Не получилось удалить вопрос-ответ.")
+
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-вопрос-ответ') and message.from_user.username in check_admins()[1])
+def handle_add_que_ans(message):
+    try:
+        content = message.text[len('!добавить-вопрос-ответ'):].strip()
+        if '?' in content and '!' in content:
+            question_part, answer = content.split('!', 1)
+            question = question_part.strip('?').strip()
+            answer = answer.strip()
+            bot.send_message(message.chat.id, add_question_answer(question, answer))
+    except Exception:
+        bot.send_message(message.chat.id, "⚠️ Не получилось добавить вопрос-ответ.")
 
 @bot.message_handler(func=lambda message: message.text.startswith('!пользователи') and message.from_user.username in check_admins()[1])
 def handle_stop_chat(message):
@@ -272,6 +301,11 @@ def process_delete_file(message, all_files):
 
 
 
+
+def get_images():
+    image_folder = 'styles'
+    return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
 def process_delete_file(message, all_files):
     try:
         file_name = message.text.strip()
@@ -322,6 +356,15 @@ def welcome(message):
                     del dialog1[:len(dialog1) - 20]
                 all_dates = get_all_dates_from_db()
                 dates_text = "\n".join(all_dates) if all_dates else "Нет доступных дат."
+                sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'AbAi event', отвечающий на языке, смотря на каком с тобой общаются, инстаграмм компании: "
+                                                           f"'https://www.instagram.com/abai.event?igsh=MWw1Zjc5d2h3ZWx0MA%3D%3D', ты отвечаешь на вопросы по поводу компании и по поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат,"
+                                                           f" а также колонок: {check_dates_and_cabins()}, если в списке нету даты, значит нету брони, а также пиши пользователю свободные кабинки в виде списка если дата свободна. Сегодняшние дата и время - {getDateAndTime(message)} "
+                                                           f"Тексты про компанию: Компания, где технологии искусственного интеллекта превращают идеи в инновации и открывают новые возможности для вашего бизнеса. Мы создаем будущее уже сегодня!, второй текст:"
+                                                           f"Our software continues to connect with users worldwide! At our client’s event in Kazakhstan, we introduced our AI Photobooth software in partnership with @ai_fotokz ."
+                                                           f"Если пользователь хочет забронировать день, то ты должен у него спросить хочет ли он забронировать, после положительного ответа отправляй ему именно этот текст никак не меняя его:Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним,если хотите завершить чат с админом введите !завершить-чат. Но твоя основная роль информировать пользователя о наличии свободных дней.'"
+                                                           f"Если пользователь хочет узнать информацию о компании,то ты ему рассказываешь про компанию, так же спрашиваешь хочет ли пользователь получить фото, видео и презентации о компании, если он скажет, что хочет, то ты будешь должен ему отправить именно этот текст, никак не меняя его : 'Сейчас отправлю вам уточняющие видео и презентации про компанию'"
+                                                           f"Если пользователь хочет сменить язык на английский пиши ему этот текст на английском, Смена языка на английский, Тілді қазақ тіліне ауыстыру, Switching language to English.. Также делай с казахским и русским и пиши смену языка на соответствующих языках. Если же у пользователя не установлен язык, спроси на каком языке ему удобно общаться, данные о его языке: {get_language_by_user_id(message.chat.id)}. Все запросы и команды ты обрабатываешь на языке пользователя. Ты можешь общаться только на русском, казахском и английском, в иных случаях говори что не поддерживаешь"
+                                                           f"{question_answer}", True, dialog1)
                 with open("question.txt", "r", encoding="utf-8") as file1:
                     question_text = file1.read().strip()
 
@@ -343,6 +386,13 @@ def welcome(message):
                 print("-" * 80)
                 print(dialog1)
                 bot.send_message(message.chat.id, sgen_text)
+                if "Switching language to English." in sgen_text:
+                    add_language(message.chat.id, "English")
+                if "Смена языка на русский." in sgen_text:
+                    add_language(message.chat.id, "Russian")
+                if "Тілді қазақ тіліне ауыстыру." in sgen_text:
+                    add_language(message.chat.id, "Kazakh")
+                if "Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
                 if "Я вас направляю к менеджеру продаж, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
                     notification_text = notify(message)
                     for admin_id in check_admins()[0]:

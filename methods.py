@@ -3,25 +3,6 @@ import json
 from datetime import datetime
 import os
 from HelperDB import *
-from googletrans import Translator
-
-translator = Translator()
-
-def detect_language(text):
-    detected = translator.detect(text)
-    return detected.lang
-
-def translate_to_russian(text):
-    """Перевод текста на русский язык."""
-    return translator.translate(text, src='auto', dest='ru').text
-
-def translate_to_kazakh(text):
-    """Перевод текста на казахский язык."""
-    return translator.translate(text, src='auto', dest='kk').text
-
-def translate_to_english(text):
-    """Перевод текста на английский язык."""
-    return translator.translate(text, src='auto', dest='en').text
 
 def request_mess(msg, prompt, dialog_history):
     url = "https://api.edenai.run/v2/text/chat"
@@ -42,13 +23,7 @@ def request_mess(msg, prompt, dialog_history):
     result = json.loads(response.text)
     print("-" * 80)
     print(result)
-    detect = detect_language(msg)
-    #if detect == "en":
-        #return translate_to_english((result['openai']['generated_text']))
-    #elif detect == "kk":
-        #return translate_to_kazakh((result['openai']['generated_text']))
-    #else:
-    return (result['openai']['generated_text'])
+    return result['openai']['generated_text']
 def get_mess(msg, prompt, use_history, dialog_history):
     if use_history == False:
         dialog_history = []
@@ -76,7 +51,9 @@ def read_file(name_file):
 def write_file(name_file, text):
     myfile = open(f"{name_file}.txt", "w")
     return myfile.write(text)
-
+def get_images():
+    image_folder = 'styles'
+    return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
 
 def notify(message):
     user_id = message.chat.id
@@ -99,6 +76,13 @@ def notify(message):
         f"<chat_id> Сообщение: <текст ответа>"
     )
     return notification_text
+
+def create_str_ans():
+    que, ans = get_table_as_lists()
+    st = ""
+    for i,k in zip(que,ans):
+        st += f"Если пользователь интересуется про {i} отвечай ему {k}\n"
+    return st
 
 def get_images(folder):
     image_folder = folder
