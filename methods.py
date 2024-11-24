@@ -35,7 +35,7 @@ def request_mess(msg, prompt, dialog_history):
         "chatbot_global_action": prompt ,
         "previous_history": dialog_history,
         "temperature": 0.0,
-        "max_tokens": 150,
+        "max_tokens": 300,
         "fallback_providers": "openai"
     }
     response = requests.post(url, json=payload, headers=headers)
@@ -43,12 +43,12 @@ def request_mess(msg, prompt, dialog_history):
     print("-" * 80)
     print(result)
     detect = detect_language(msg)
-    if detect == "en":
-        return translate_to_english((result['openai']['generated_text']))
-    elif detect == "kk":
-        return translate_to_kazakh((result['openai']['generated_text']))
-    else:
-        return (result['openai']['generated_text'])
+    #if detect == "en":
+        #return translate_to_english((result['openai']['generated_text']))
+    #elif detect == "kk":
+        #return translate_to_kazakh((result['openai']['generated_text']))
+    #else:
+    return (result['openai']['generated_text'])
 def get_mess(msg, prompt, use_history, dialog_history):
     if use_history == False:
         dialog_history = []
@@ -76,9 +76,7 @@ def read_file(name_file):
 def write_file(name_file, text):
     myfile = open(f"{name_file}.txt", "w")
     return myfile.write(text)
-def get_images():
-    image_folder = 'styles'
-    return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
 
 def notify(message):
     user_id = message.chat.id
@@ -101,3 +99,7 @@ def notify(message):
         f"<chat_id> Сообщение: <текст ответа>"
     )
     return notification_text
+
+def get_images(folder):
+    image_folder = folder
+    return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]

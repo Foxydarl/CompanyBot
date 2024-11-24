@@ -1,8 +1,15 @@
+# -*- coding: utf-8 -*-
 import telebot
 from config import token
 from methods import *
 from HelperDB import *
+import urllib.parse
 
+
+with open("text.txt", "r", encoding="utf-8") as file:
+                    company_text = file.read().strip()
+with open("company_info.txt", "r", encoding="utf-8") as file:
+                    company_info = file.read().strip()
 if not os.path.exists('presentations'):
     os.makedirs('presentations')
 if not os.path.exists('videos'):
@@ -265,11 +272,6 @@ def process_delete_file(message, all_files):
 
 
 
-
-def get_images():
-    image_folder = 'styles'
-    return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-
 def process_delete_file(message, all_files):
     try:
         file_name = message.text.strip()
@@ -317,16 +319,22 @@ def welcome(message):
             if not check_waiting_status(message.chat.id):
                 dialog1 = get_dialog_from_db(message.chat.id)
                 if len(dialog1) >= 20:
-                    dialog1 = dialog1[20:]
+                    del dialog1[:len(dialog1) - 20]
                 all_dates = get_all_dates_from_db()
                 dates_text = "\n".join(all_dates) if all_dates else "Нет доступных дат."
-                sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'AbAi event', отвечающий на языке, смотря на каком с тобой общаются, инстаграмм компании: "
-                                                           f"'https://www.instagram.com/abai.event?igsh=MWw1Zjc5d2h3ZWx0MA%3D%3D', ты отвечаешь на вопросы по поводу компании и по поводу брони, как отдел бронирования, отвечая занят день или нет, список занятых дат,"
-                                                           f" а также колонок: {check_dates_and_cabins()}, если в списке нету даты, значит нету брони, а также пиши пользователю свободные кабинки в виде списка если дата свободна. Сегодняшние дата и время - {getDateAndTime(message)} "
-                                                           f"Тексты про компанию: Компания, где технологии искусственного интеллекта превращают идеи в инновации и открывают новые возможности для вашего бизнеса. Мы создаем будущее уже сегодня!, второй текст:"
-                                                           f"Our software continues to connect with users worldwide! At our client’s event in Kazakhstan, we introduced our AI Photobooth software in partnership with @ai_fotokz ."
-                                                           f"Если пользователь хочет забронировать день, то ты должен у него спросить хочет ли он забронировать, после положительного ответа отправляй ему именно этот текст никак не меняя его:Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним,если хотите завершить чат с админом введите !завершить-чат. Но твоя основная роль информировать пользователя о наличии свободных дней.'"
-                                                           f"Если пользователь хочет узнать информацию о компании,то ты ему рассказываешь про компанию, так же спрашиваешь хочет ли пользователь получить фото, видео и презентации о компании, если он скажет, что хочет, то ты будешь должен ему отправить именно этот текст, никак не меняя его : 'Сейчас отправлю вам уточняющие видео и презентации про компанию'", True, dialog1)
+                with open("question.txt", "r", encoding="utf-8") as file1:
+                    question_text = file1.read().strip()
+
+                encoded_query = urllib.parse.quote(message.text)
+                sgen_text = get_mess(message.text, f"Ты искуственный помощник технической поддержки компании 'AbAi event', отвечающий на языке, смотря на каком с тобой общаются,"
+                                                           f"ты отвечаешь на вопросы по поводу компании и по поводу брони, так же ты просто разговариваешь с пользователем если он ведёт с тобой диалог, если человек спрашивает про бронь, ты отвечаешь занят день или нет, если занят, то какими будками, список занятых дат,"
+                                                           f"а также колонок: {check_dates_and_cabins()}, если в списке нету даты, значит нету брони, а также пиши пользователю свободные кабинки в виде списка если дата свободна. Сегодняшние дата и время - {getDateAndTime(message)} "
+                                                           f"Информационный текст в котором расписаны случаи, как на что отвечать и различная информация:: {company_text}"
+                                                           f"Информация про компанию, имея данную информацию, ты отвечаешь на вопросы, если они поступят: {company_info}"
+                                                           f"На глупые вопросы или вопросы не по поводу компании или вопросы которые не по теме диалога ты отправляешь эту ссылку, никак просто не меняя её, не добавляя никакого текста: 'https://google-poisk-vmesto-tebya.ru/?q={encoded_query}', только одну, но если пользователь просто спрашивает как дела или просто говорит привет, то ты отвечаешь по нормальному, как обычно отвечал бы"
+                                                           f"Если пользователь хочет забронировать день, то ты должен скинуть ему контактные данные менеджера продаж, затем спросить у пользователя хочет ли он забронировать в телеграмме напрямую, после положительного ответа отправляй ему именно этот текст никак не меняя его:Я вас направляю к менеджеру продаж, все подробности, а также бронирование можете обсудить с ним,если хотите завершить чат с админом введите !завершить-чат. Но твоя основная роль информировать пользователя о наличии свободных дней.'"
+                                                           f"Если пользователь хочет узнать информацию о компании, то ты ему рассказываешь про компанию, так же спрашиваешь хочет ли пользователь получить больше информации про компанию, если он скажет, что хочет, то ты будешь спросить у него информацию из данного текста: '{question_text}'"
+                                                           f"Если пользователь говорит, что хочет узнать про стили обработки ИИ(оно находится под цифрой 1, после уточняющего вопроса), то ты отправляешь именно этот текст, никак не меняя его: 'Сейчас, отправлю стили обработки ИИ для вашего ознакомления'", True, dialog1)
                 print("-" * 80)
                 print(dates_text)
                 dialog1.append({"role": "user", "message": message.text})
@@ -335,37 +343,19 @@ def welcome(message):
                 print("-" * 80)
                 print(dialog1)
                 bot.send_message(message.chat.id, sgen_text)
-                if "Я вас направляю к админу, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
+                if "Я вас направляю к менеджеру продаж, все подробности, а также бронирование можете обсудить с ним." in sgen_text:
                     notification_text = notify(message)
                     for admin_id in check_admins()[0]:
                         bot.send_message(admin_id, notification_text)
-                elif "Сейчас отправлю вам уточняющие видео и презентации про компанию" in sgen_text:
+                elif "Сейчас, отправлю стили обработки ИИ для вашего ознакомления" in sgen_text:
                     try:
-                        presentations = get_presentations()
-                        for presentation in presentations:
-                            with open(presentation, 'rb') as file:
-                                bot.send_document(message.chat.id, file)
-                    except Exception as e:
-                        print(f"Error sending presentations: {e}")
-                        bot.send_message(message.chat.id, "Произошла ошибка при отправке презентаций.")
-                    try:
-                        videos = get_videos()
-                        for video in videos:
-                            with open(video, 'rb') as file:
-                                bot.send_video(message.chat.id, file)
-                    except Exception as e:
-                        print(f"Error sending videos: {e}")
-                        bot.send_message(message.chat.id, "Произошла ошибка при отправке видео.")
-
-                    try:
-                        bot.send_message(message.chat.id, "Также, смотрите какие стили у нас есть:")
-                        images = get_images()
-
+                        images = get_images('styles')
                         if images:
                             for image_path in images:
                                 with open(image_path, 'rb') as img_file:
                                     bot.send_photo(message.chat.id, img_file)
-
+                                    bot.send_message(message.chat.id, os.path.basename(image_path))
+                            bot.send_message(message.chat.id, "Не нашли подходящий? \nМы можем разработать индивидуальный стиль")
                     except Exception as e:
                         print(f"Error sending styles: {e}")
             else:
