@@ -39,7 +39,8 @@ def createDataBase():
             telegramUserId TEXT UNIQUE DEFAULT NULL,
             whatsappPhoneNumber TEXT UNIQUE DEFAULT NULL,
             instagramUserId TEXT UNIQUE DEFAULT NULL,
-            waiting TEXT DEFAULT "False"
+            waiting TEXT DEFAULT "False",
+            languge TEXT DEFAULT NONE
         )
     ''')
     conn.commit()
@@ -416,3 +417,14 @@ def get_table_as_lists():
     questions = [row[0] for row in rows]
     answers = [row[1] for row in rows]
     return questions, answers
+
+def get_language_by_user_id(user_id):
+    cursor.execute('SELECT language FROM users WHERE telegramChatID = ?', (user_id,))
+    rows = cursor.fetchall()
+    conn.commit()
+    return rows[0][0] if rows else None
+
+def add_language(chat_id, language):
+    cursor.execute('UPDATE users SET language = ? WHERE telegramChatID = ?', (language, chat_id))
+    print(cursor.fetchone())
+    conn.commit()
