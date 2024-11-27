@@ -210,8 +210,7 @@ def process_file_name(message, file):
     try:
         user_file_name = message.text.strip()
         if user_file_name:
-            bot.send_message(message.chat.id, "Пожалуйста, введите описание файла.")
-            bot.register_next_step_handler(message, process_file_description, file, user_file_name)
+            bot.send_message(message.chat.id, "Название файла сохранено")
         else:
             bot.send_message(message.chat.id, "Ошибка, вы не ввели название файла.")
     except Exception as e:
@@ -219,34 +218,7 @@ def process_file_name(message, file):
         print(f"Error during file name processing: {e}")
 
 
-def process_file_description(message, file, user_file_name):
-    try:
-        description = message.text.strip()
-        if description:
-            folder_path = 'styles'
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
 
-            description_path = os.path.join('descriptions', f"{user_file_name}.txt")
-            if not os.path.exists('descriptions'):
-                os.makedirs('descriptions')
-
-            with open(description_path, 'w') as desc_file:
-                desc_file.write(description)
-
-            file_info = bot.get_file(file.file_id)
-            downloaded_file = bot.download_file(file_info.file_path)
-            file_path = os.path.join(folder_path, user_file_name)
-
-            with open(file_path, 'wb') as new_file:
-                new_file.write(downloaded_file)
-
-            bot.send_message(message.chat.id, f"Файл '{user_file_name}' и описание успешно добавлены!")
-        else:
-            bot.send_message(message.chat.id, "Ошибка, вы не ввели описание файла.")
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Произошла ошибка при обработке файла: {e}")
-        print(f"Error during file name processing: {e}")
 
 @bot.message_handler(func=lambda message: message.text.startswith('!остановить-чат') and message.from_user.username in check_admins()[1])
 def handle_stop_chat(message):
