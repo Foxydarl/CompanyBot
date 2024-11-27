@@ -87,3 +87,7 @@ def create_str_ans():
 def get_images(folder):
     image_folder = folder
     return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+def get_folders(path):
+    """Возвращает список всех подпапок внутри указанной директории."""
+    return [os.path.join(path, folder) for folder in os.listdir(path) if os.path.isdir(os.path.join(path, folder))]
