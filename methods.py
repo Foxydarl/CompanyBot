@@ -35,15 +35,6 @@ def get_mess(msg, prompt, use_history, dialog_history):
 def getDateAndTime(self):
     return datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
-
-def get_presentations():
-    folder_path = 'presentations'
-    return [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith('.pdf') or file.endswith('.pptx')]
-
-def get_videos():
-    folder_path = 'videos'
-    return [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file.endswith(('.mp4', '.mov'))]
-
 def read_file(name_file):
     myfile = open(f"{name_file}.txt", "r")
     return myfile.read()
@@ -51,9 +42,6 @@ def read_file(name_file):
 def write_file(name_file, text):
     myfile = open(f"{name_file}.txt", "w")
     return myfile.write(text)
-def get_images():
-    image_folder = 'styles'
-    return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
 
 def notify(message):
     user_id = message.chat.id
@@ -84,10 +72,17 @@ def create_str_ans():
         st += f"Если пользователь интересуется про {i} отвечай ему {k}\n"
     return st
 
-def get_images(folder):
-    image_folder = folder
-    return [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+def get_files(file):
+    file_folder = file
+    ends = ('.png', '.jpg', '.jpeg', '.mp4', '.mov' '.pptx', '.pdf')
+    return [os.path.join(file_folder, f) for f in os.listdir(file_folder) if f.lower().endswith(ends)]
 
 def get_folders(path):
-    """Возвращает список всех подпапок внутри указанной директории."""
     return [os.path.join(path, folder) for folder in os.listdir(path) if os.path.isdir(os.path.join(path, folder))]
+
+def display_files():
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    folders = [f for f in os.listdir(current_directory) if os.path.isdir(os.path.join(current_directory, f))]
+    print("Список папок в текущей директории:", folders)
+
+display_files()

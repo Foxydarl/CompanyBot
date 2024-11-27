@@ -180,6 +180,10 @@ def handle_delete_date(message):
     else:
         bot.send_message(message.chat.id, "Не была указана дата для удаления. Пожалуйста, введите её.")
 
+@bot.message_handler(func=lambda message: message.text.startswith('!открыть-файлы') and message.from_user.username in check_admins()[1])
+def handle_display_files(message):
+    print()
+
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл') and message.from_user.username in check_admins()[1])
 def handle_add_file(message):
     bot.send_message(message.chat.id, "Пожалуйста, отправьте файл (презентацию, видео или изображение).")
@@ -270,13 +274,7 @@ def process_delete_file(message, all_files):
     except Exception as e:
         bot.send_message(message.chat.id, f"Произошла ошибка при удалении файла: {e}")
         print(f"Error during file deletion: {e}")
-
-
-
-
-
-
-
+ 
 
 @bot.message_handler(func=lambda message: message.from_user.username in check_admins()[1] and "Сообщение" in message.text)
 def handle_admin_reply(message):
