@@ -77,12 +77,43 @@ def get_files(file):
     ends = ('.png', '.jpg', '.jpeg', '.mp4', '.mov' '.pptx', '.pdf')
     return [os.path.join(file_folder, f) for f in os.listdir(file_folder) if f.lower().endswith(ends)]
 
+
+#presentations\test8.mp4
+#'file_id': 'CgACAgIAAxkBAAIaDWdHT3g1tLZebiRM4T4DPjFpZVrCAAKFZgACmhY5SnKCMqoXnGIONgQ', 'file_unique_id': 'AgADhWYAApoWOUo', 'file_size': 3764080, 'file_path': 'animations/file_83.mp4'}
+
+def save_file(file, file_info):
+    print()
+
 def get_folders(path):
     return [os.path.join(path, folder) for folder in os.listdir(path) if os.path.isdir(os.path.join(path, folder))]
 
 def display_files():
-    current_directory = os.path.dirname(os.path.abspath(__file__))
+    current_directory = os.getcwd()  # Используем текущую рабочую директорию
     folders = [f for f in os.listdir(current_directory) if os.path.isdir(os.path.join(current_directory, f))]
-    print("Список папок в текущей директории:", folders)
+    sort_folders = "\n".join(sorted(folders)[3:])
+    return f"Список папок:\n{sort_folders}"
 
-display_files()
+def check_folder_contents(folder_path):
+    try:
+        contents = os.listdir(folder_path)
+        directories = [item for item in contents if os.path.isdir(os.path.join(folder_path, item))]
+        files = [item for item in contents if os.path.isfile(os.path.join(folder_path, item))]
+
+        if directories:
+            folders = "В данной папке есть подпапки. Укажите, в какую вы хотите перейти:\n"
+            folders += "\n".join(directories)
+            return [folders, True, None]
+        elif not files and not directories:
+            return ["Данная папка пуста. Отправьте файл, и я его добавлю.", False, False]
+        else:
+            file_list = "Вот файлы, находящиеся в данной папке:\n"
+            file_list += "\n".join(files)
+            return [file_list, False, True]
+    except Exception as e:
+        print(f"Ошибка при проверке содержимого папки: {e}")
+        return ["Произошла ошибка при проверке содержимого папки.", False, False]
+
+print(display_files())
+
+
+

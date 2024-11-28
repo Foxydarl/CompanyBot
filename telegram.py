@@ -17,7 +17,10 @@ if not os.path.exists('videos'):
 createDataBase()
 headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNDcyNDg2ODAtNjMzMC00MmJiLWE3NGItMjlkNTQyYjJiNzFhIiwidHlwZSI6ImFwaV90b2tlbiJ9.y_1ufwKGnOWSZqAFgDJO0h99aoOXZ9dUZDKyNBvw6ks"}
 
-bot = telebot.TeleBot(token)
+a = int(input())
+if a == 1 : bot = telebot.TeleBot(token)
+else: bot = telebot.TeleBot("6514999735:AAHO4Ypc87aYUZ8nbDTMp6Ny8ULepl6c3fE")
+#bot = telebot.TeleBot(token)
 dialog = []
 info_about_commands = ("Информация о командах:\n!показать-вопросы\n!удалить-вопрос-ответ ?вопрос\n!добавить-вопрос-ответ ?вопрос !ответ\n!пользователи\n!админы\n!удалить-админа\n!добавить-админа\n!добавить-колонку <название_продолжение>\n!удалить-колонку <название_продолжение>\n!обновить-слот <дата> <колонка> <статус>"
                        "\n!показать-таблицу\n!забронировать <дата> <колонка>\n!добавить-данные-о-кабинках\n!ожидающие-ответа\n!добавить-дату\n!удалить-дату"
@@ -184,44 +187,114 @@ def handle_delete_date(message):
 def handle_display_files(message):
     print()
 
-@bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл') and message.from_user.username in check_admins()[1])
+
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл1'))
 def handle_add_file(message):
-    bot.send_message(message.chat.id, "Пожалуйста, отправьте файл (презентацию, видео или изображение).")
+    bot.send_message(message.chat.id, f"Укажите в какую папку вы хотите добавить файл.\n{display_files()}")
+    bot.register_next_step_handler(message, process_file1, os.getcwd())  # Передаем текущую директорию
+
+
+def process_file1(message, current_path):
+    try:
+        if message.text.lower() == "выйти":
+            bot.send_message(message.chat.id, "Выхожу из этой функции.")
+            return
+
+        target_path = os.path.join(current_path, message.text)
+
+        if not os.path.exists(target_path) or not os.path.isdir(target_path):
+            bot.send_message(message.chat.id, "Введите корректное название папки или напишите <Выйти>.")
+            bot.register_next_step_handler(message, process_file1, current_path)
+            return
+
+        check = check_folder_contents(target_path)
+        bot.send_message(message.chat.id, check[0])
+
+        if not check[1] and not check[2]:  # Папка пуста
+            bot.send_message(message.chat.id, "Можете отправить файл, и я добавлю его в данную папку.")
+            bot.register_next_step_handler(message, save_file, target_path)
+
+        elif check[1] and check[2] is None:  # Есть подпапки, но нет файлов
+            bot.register_next_step_handler(message, process_file1, target_path)
+
+        elif not check[1] and check[2]:  # Есть только файлы
+            bot.send_message(message.chat.id, "Можете отправить файл, и я добавлю его в данную папку или напишите <Выйти>.")
+            bot.register_next_step_handler(message, save_file1, target_path)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Произошла ошибка при обработке папки: {e}")
+
+def save_file1(message, folder_path):
+    try:
+        if message.text:
+            if message.text.lower() == 'выйти':
+                bot.send_message(message.chat.id, 'Выхожу из функции.')
+                return
+        if message.document:
+            file_info = bot.get_file(message.document.file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            file_path = os.path.join(folder_path, message.document.file_name)
+
+            with open(file_path, 'wb') as new_file:
+                new_file.write(downloaded_file)
+
+            bot.send_message(message.chat.id, f"Файл '{message.document.file_name}' успешно сохранен в папке '{folder_path}'.")
+        else:
+            bot.send_message(message.chat.id, "Пожалуйста, отправьте документ.")
+            bot.register_next_step_handler(message, save_file, folder_path)
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Ошибка при сохранении файла: {e}")
+
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл'))
+def handle_add_file(message):
+    bot.send_message(message.chat.id, "Пожалуйста, отправьте файл (презентацию, видео или фото).")
     bot.register_next_step_handler(message, process_file)
 
 def process_file(message):
     try:
+        print(message)
         if message.document:
             file = message.document
-            bot.send_message(message.chat.id, "Пожалуйста, введите название и расширение файла.")
-            bot.register_next_step_handler(message, process_file_name, file)
+            save_file(file, 'presentations', message.chat.id)
         elif message.video:
             file = message.video
-            bot.send_message(message.chat.id, "Пожалуйста, введите название и расширение видео.")
-            bot.register_next_step_handler(message, process_file_name, file)
+            save_file(file, 'videos', message.chat.id)
         elif message.photo:
+            # Берем файл с наибольшим разрешением
             file = message.photo[-1]
-            bot.send_message(message.chat.id, "Пожалуйста, введите название и расширение изображения.")
-            bot.register_next_step_handler(message, process_file_name, file)
+            save_file(file, 'styles', message.chat.id)
         else:
-            bot.send_message(message.chat.id, "Ошибка, вы отправили неподдерживаемый тип данных.")
+            bot.send_message(message.chat.id, "Файл не распознан. Пожалуйста, отправьте документ, видео или фото.")
     except Exception as e:
         print(f"Error during file processing: {e}")
-        bot.send_message(message.chat.id, f"Произошла ошибка при проверке типа файла: {e}")
+        bot.send_message(message.chat.id, f"Произошла ошибка при обработке файла: {e}")
 
-
-def process_file_name(message, file):
+def save_file(file, folder_path, chat_id):
     try:
-        user_file_name = message.text.strip()
-        if user_file_name:
-            bot.send_message(message.chat.id, "Название файла сохранено")
+        # Получаем информацию о файле
+        file_info = bot.get_file(file.file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        # Если у файла есть оригинальное имя (для документов), используем его
+        if hasattr(file, 'file_name'):
+            file_name = file.file_name
         else:
-            bot.send_message(message.chat.id, "Ошибка, вы не ввели название файла.")
+            # Если это фото или видео, генерируем имя
+            file_name = f"{file.file_id}.jpg" if folder_path == 'styles' else f"{file.file_id}.mp4"
+
+        # Убедимся, что папка существует
+        os.makedirs(folder_path, exist_ok=True)
+
+        # Полный путь для сохранения файла
+        file_path = os.path.join(folder_path, file_name)
+        with open(file_path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+
+        bot.send_message(chat_id, f"Файл '{file_name}' успешно сохранен в папке '{folder_path}'!")
+        print(f"Файл сохранен по пути: {file_path}")
     except Exception as e:
-        bot.send_message(message.chat.id, f"Произошла ошибка при обработке имени файла: {e}")
-        print(f"Error during file name processing: {e}")
-
-
+        bot.send_message(chat_id, f"Произошла ошибка при сохранении файла: {e}")
+        print(f"Error during file saving: {e}")
 
 
 @bot.message_handler(func=lambda message: message.text.startswith('!остановить-чат') and message.from_user.username in check_admins()[1])
@@ -232,7 +305,7 @@ def process_stop_chat(message):
     change_waiting_flag_false(message.text)
     bot.send_message(message.chat.id, f"Чат с {message.text} завершен.")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!удалить-файл') and message.from_user.username in check_admins()[1])
+'''@bot.message_handler(func=lambda message: message.text.startswith('!удалить-файл') and message.from_user.username in check_admins()[1])
 def handle_delete_file(message):
     presentations = get_presentations()
     videos = get_videos()
@@ -273,7 +346,7 @@ def process_delete_file(message, all_files):
             bot.send_message(message.chat.id, "Отмена функции, введено неправильное название файла.")
     except Exception as e:
         bot.send_message(message.chat.id, f"Произошла ошибка при удалении файла: {e}")
-        print(f"Error during file deletion: {e}")
+        print(f"Error during file deletion: {e}")'''
  
 
 @bot.message_handler(func=lambda message: message.from_user.username in check_admins()[1] and "Сообщение" in message.text)
@@ -357,7 +430,7 @@ def welcome(message):
                     folders = get_folders('styles')
                     if folders:
                         for folder in folders:
-                            images = get_images(folder)
+                            images = get_files(folder)
                             if images:
                                 # Отправляем все изображения
                                 for image_path in images:
@@ -367,7 +440,7 @@ def welcome(message):
                                 folder_name = os.path.basename(folder)
                                 bot.send_message(message.chat.id, folder_name)
                 elif "Сейчас отправлю примеры фото с наложенным ИИ" in sgen_text:
-                    images = get_images('examples')
+                    images = get_files('examples')
                     if images:
                         # Отправляем все изображения
                         for image_path in images:
@@ -377,7 +450,7 @@ def welcome(message):
                     folders = get_folders('photobooth')
                     if folders:
                         for folder in folders:
-                            images = get_images(folder)
+                            images = get_files(folder)
                             if images:
                                 for image_path in images:
                                     with open(image_path, 'rb') as img_file:
@@ -387,14 +460,14 @@ def welcome(message):
                                 bot.send_message(message.chat.id, folder_name)
 
                 elif "Сейчас скину информирующие презентации о компании" in sgen_text:
-                    presentations = get_presentations()
+                    presentations = get_files("presentations")
                     if presentations:
                         for presentation in presentations:
                             with open(presentation, 'rb') as presentation_file:
                                 bot.send_document(message.chat.id, presentation_file)
 
                 elif "Сейчас скину видео о компании" in sgen_text:
-                    videos = get_videos()
+                    videos = get_files("videos")
                     if videos:
                         for video in videos:
                             with open(video, 'rb') as video_file:

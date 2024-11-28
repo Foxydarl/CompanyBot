@@ -286,14 +286,26 @@ def add_admin(username):
     cursor.execute("SELECT telegramChatId FROM users WHERE telegramUserId = ?", (username,))
     result = cursor.fetchone()
     chat_id = result[0]
-    cursor.execute("INSERT INTO admins (chat_id, username) VALUES (?, ?)", (chat_id, username))
-    conn.commit()
-    return f"Админ с username {username} и chatId {chat_id} добавлен."
+    try:
+        cursor.execute("INSERT INTO admins (chat_id, username) VALUES (?, ?)", (chat_id, username))
+        conn.commit()
+        return f"Админ с username {username} и chatId {chat_id} добавлен."
+    except sqlite3.IntegrityError as e:
+        if "UNIQUE constraint failed: admins.chat_id" in str(e):
+            return f"Админ уже добавлен."
+        else:
+            return "Ошибка при добавлении администратора."
+
 
 def delete_admin(username):
-    cursor.execute("DELETE FROM admins WHERE username = ?", (username,))
-    conn.commit()
-    return f"Админ с username {username} удален."
+    cursor.execute("SELECT * FROM admins WHERE username = ?", (username,))
+    admin = cursor.fetchone()
+    if admin:
+        cursor.execute("DELETE FROM admins WHERE username = ?", (username,))
+        conn.commit()
+        return f"Админ с username '{username}' удален."
+    else:
+        return f"Админ с username '{username}' не найден."
 
 def check_admins():
     cursor.execute("SELECT chat_id FROM admins")
