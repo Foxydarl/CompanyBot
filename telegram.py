@@ -125,13 +125,19 @@ def handle_remove_column(message):
         result = "⚠️ Используйте: !удалить-колонку <название_продолжение>"
     bot.reply_to(message, result)
 
-@bot.message_handler(func=lambda message: message.text.startswith('!обновить-слот') and message.from_user.username in check_admins()[1])
+@bot.message_handler(func=lambda message: message.text.startswith('!обновить-бронь-даты') and message.from_user.username in check_admins()[1])
 def handle_update_slot(message):
     try:
+        if message.text == "выйти":
+            bot.send_message(message.chat.id, "ВЫхожу из функции.")
+            return
         _, date, column_name, status = message.text.split(" ", 3)
+        if status != "free" or "booked":
+            bot.send_message(message.chat.id, "В качестве статуса используйте <free> или <booked>")
+            bot.register_next_step_handler(message, handle_update_slot)
         result = update_slot(date, column_name, status)
     except ValueError:
-        result = "⚠️ Используйте: !обновить-слот <дата> <колонка> <статус>"
+        result = "⚠️ Используйте: !обновить-бронь-даты <дата> <колонка> <статус>"
     bot.reply_to(message, result)
 
 @bot.message_handler(func=lambda message: message.text.startswith('!показать-таблицу') and message.from_user.username in check_admins()[1])
@@ -183,18 +189,11 @@ def handle_delete_date(message):
     else:
         bot.send_message(message.chat.id, "Не была указана дата для удаления. Пожалуйста, введите её.")
 
-@bot.message_handler(func=lambda message: message.text.startswith('!открыть-файлы') and message.from_user.username in check_admins()[1])
-def handle_display_files(message):
-    print()
-
-
-@bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл1'))
-def handle_add_file(message):
-    bot.send_message(message.chat.id, f"Укажите в какую папку вы хотите добавить файл.\n{display_files()}")
-    bot.register_next_step_handler(message, process_file1, os.getcwd())  # Передаем текущую директорию
-
-
-def process_file1(message, current_path):
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-папку'))
+def handle_add_folder(message):
+    bot.send_message(message.chat.id, f"Укажите папку, в которой вы хотите создать новую папку.\n{display_files()}")
+    bot.register_next_step_handler(message, process_add_folder, os.getcwd())
+def process_add_folder(message, current_path):
     try:
         if message.text.lower() == "выйти":
             bot.send_message(message.chat.id, "Выхожу из этой функции.")
@@ -204,7 +203,131 @@ def process_file1(message, current_path):
 
         if not os.path.exists(target_path) or not os.path.isdir(target_path):
             bot.send_message(message.chat.id, "Введите корректное название папки или напишите <Выйти>.")
-            bot.register_next_step_handler(message, process_file1, current_path)
+            bot.register_next_step_handler(message, process_add_folder, current_path)
+            return
+
+        bot.send_message(message.chat.id, "Введите название новой папки, которую хотите создать, или напишите <Выйти>.")
+        bot.register_next_step_handler(message, create_folder, target_path)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Произошла ошибка при добавлении папки: {e}")
+def create_folder(message, folder_path):
+    try:
+        if message.text.lower() == "выйти":
+            bot.send_message(message.chat.id, "Выхожу из этой функции.")
+            return
+
+        new_folder_name = message.text.strip()
+        new_folder_path = os.path.join(folder_path, new_folder_name)
+
+        if os.path.exists(new_folder_path):
+            bot.send_message(message.chat.id, "Папка с таким названием уже существует. Попробуйте снова или напишите <Выйти>.")
+            bot.register_next_step_handler(message, create_folder, folder_path)
+        else:
+            os.makedirs(new_folder_path)
+            bot.send_message(message.chat.id, f"Папка '{new_folder_name}' успешно создана в '{folder_path}'.")
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Произошла ошибка при создании папки: {e}")
+
+@bot.message_handler(func=lambda message: message.text.startswith('!удалить-папку'))
+def handle_delete_folder(message):
+    bot.send_message(message.chat.id, f"Укажите папку, в которой вы хотите удалить папку.\n{display_files()}")
+    bot.register_next_step_handler(message, process_delete_folder, os.getcwd())
+def process_delete_folder(message, current_path):
+    try:
+        if message.text.lower() == "выйти":
+            bot.send_message(message.chat.id, "Выхожу из этой функции.")
+            return
+
+        target_path = os.path.join(current_path, message.text)
+
+        if not os.path.exists(target_path) or not os.path.isdir(target_path):
+            bot.send_message(message.chat.id, "Введите корректное название папки или напишите <Выйти>.")
+            bot.register_next_step_handler(message, process_delete_folder, current_path)
+            return
+
+        check = check_folder_contents(target_path)
+        bot.send_message(message.chat.id, check[0])
+
+        if check[1]:  # Есть подпапки
+            bot.send_message(message.chat.id, "Укажите название подпапки, которую хотите удалить, или напишите <Выйти>.")
+            bot.register_next_step_handler(message, confirm_delete_folder, target_path)
+        else:
+            bot.send_message(message.chat.id, "Введите название подпапки, которую хотите удалить, или напишите <Выйти>.")
+            bot.register_next_step_handler(message, confirm_delete_folder, target_path)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Произошла ошибка при удалении папки: {e}")
+def confirm_delete_folder(message, folder_path):
+    try:
+        if message.text.lower() == "выйти":
+            bot.send_message(message.chat.id, "Выхожу из этой функции.")
+            return
+
+        folder_name = message.text.strip()
+        target_folder_path = os.path.join(folder_path, folder_name)
+
+        if os.path.exists(target_folder_path) and os.path.isdir(target_folder_path):
+            # Проверяем содержимое папки
+            contents = os.listdir(target_folder_path)
+            if contents:
+                bot.send_message(message.chat.id, f"В папке '{folder_name}' есть файлы или подпапки. Вы уверены, что хотите удалить её? (да/нет)")
+                bot.register_next_step_handler(message, delete_folder_with_confirmation, target_folder_path)
+            else:
+                # Папка пуста, можно удалить сразу
+                os.rmdir(target_folder_path)
+                bot.send_message(message.chat.id, f"Папка '{folder_name}' успешно удалена.")
+        else:
+            bot.send_message(message.chat.id, "Папка с таким названием не найдена. Попробуйте снова или напишите <Выйти>.")
+            bot.register_next_step_handler(message, confirm_delete_folder, folder_path)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Произошла ошибка при проверке папки: {e}")
+def delete_folder_with_confirmation(message, folder_path):
+    try:
+        if message.text.lower() == "да":
+            # Удаляем содержимое папки и саму папку
+            for item in os.listdir(folder_path):
+                item_path = os.path.join(folder_path, item)
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+                elif os.path.isdir(item_path):
+                    delete_folder_contents(item_path)  # Рекурсивно удаляем подпапки
+            os.rmdir(folder_path)
+            bot.send_message(message.chat.id, f"Папка '{os.path.basename(folder_path)}' и её содержимое успешно удалены.")
+        elif message.text.lower() == "нет":
+            bot.send_message(message.chat.id, "Удаление отменено.")
+        else:
+            bot.send_message(message.chat.id, "Введите 'да' или 'нет'.")
+            bot.register_next_step_handler(message, delete_folder_with_confirmation, folder_path)
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Произошла ошибка при удалении папки: {e}")
+def delete_folder_contents(folder_path):
+    """Рекурсивно удаляет содержимое папки."""
+    for item in os.listdir(folder_path):
+        item_path = os.path.join(folder_path, item)
+        if os.path.isfile(item_path):
+            os.remove(item_path)
+        elif os.path.isdir(item_path):
+            delete_folder_contents(item_path)
+    os.rmdir(folder_path)
+
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл'))
+def handle_add_file(message):
+    bot.send_message(message.chat.id, f"Укажите в какую папку вы хотите добавить файл.\n{display_files()}")
+    bot.register_next_step_handler(message, process_file, os.getcwd())  # Передаем текущую директорию
+def process_file(message, current_path):
+    try:
+        if message.text.lower() == "выйти":
+            bot.send_message(message.chat.id, "Выхожу из этой функции.")
+            return
+
+        target_path = os.path.join(current_path, message.text)
+
+        if not os.path.exists(target_path) or not os.path.isdir(target_path):
+            bot.send_message(message.chat.id, "Введите корректное название папки или напишите <Выйти>.")
+            bot.register_next_step_handler(message, process_file, current_path)
             return
 
         check = check_folder_contents(target_path)
@@ -215,87 +338,64 @@ def process_file1(message, current_path):
             bot.register_next_step_handler(message, save_file, target_path)
 
         elif check[1] and check[2] is None:  # Есть подпапки, но нет файлов
-            bot.register_next_step_handler(message, process_file1, target_path)
+            bot.register_next_step_handler(message, process_file, target_path)
 
         elif not check[1] and check[2]:  # Есть только файлы
             bot.send_message(message.chat.id, "Можете отправить файл, и я добавлю его в данную папку или напишите <Выйти>.")
-            bot.register_next_step_handler(message, save_file1, target_path)
+            bot.register_next_step_handler(message, save_file, target_path)
 
     except Exception as e:
         bot.send_message(message.chat.id, f"Произошла ошибка при обработке папки: {e}")
-
-def save_file1(message, folder_path):
+def save_file(message, folder_path):
     try:
-        if message.text:
-            if message.text.lower() == 'выйти':
-                bot.send_message(message.chat.id, 'Выхожу из функции.')
-                return
-        if message.document:
-            file_info = bot.get_file(message.document.file_id)
+        if message.text and message.text.lower() == 'выйти':
+            bot.send_message(message.chat.id, 'Выхожу из функции.')
+            return
+
+        if message.document or message.photo or message.video:
+            # Определяем тип файла
+            if message.document:
+                file_info = bot.get_file(message.document.file_id)
+                original_name = message.document.file_name
+            elif message.photo:
+                file_info = bot.get_file(message.photo[-1].file_id)  # Берем фото с наибольшим разрешением
+                original_name = "photo.jpg"  # Указываем стандартное имя
+            elif message.video:
+                file_info = bot.get_file(message.video.file_id)
+                original_name = "video.mp4"  # Указываем стандартное имя
+
+            # Скачиваем файл
             downloaded_file = bot.download_file(file_info.file_path)
-            file_path = os.path.join(folder_path, message.document.file_name)
 
-            with open(file_path, 'wb') as new_file:
-                new_file.write(downloaded_file)
+            # Запрос названия файла у пользователя
+            bot.send_message(message.chat.id, "Введите название файла без расширения:")
+            bot.register_next_step_handler(message, save_file_with_custom_name, folder_path, downloaded_file, original_name)
 
-            bot.send_message(message.chat.id, f"Файл '{message.document.file_name}' успешно сохранен в папке '{folder_path}'.")
         else:
-            bot.send_message(message.chat.id, "Пожалуйста, отправьте документ.")
+            bot.send_message(message.chat.id, "Пожалуйста, отправьте документ, фото или видео.")
             bot.register_next_step_handler(message, save_file, folder_path)
     except Exception as e:
         bot.send_message(message.chat.id, f"Ошибка при сохранении файла: {e}")
-
-@bot.message_handler(func=lambda message: message.text.startswith('!добавить-файл'))
-def handle_add_file(message):
-    bot.send_message(message.chat.id, "Пожалуйста, отправьте файл (презентацию, видео или фото).")
-    bot.register_next_step_handler(message, process_file)
-
-def process_file(message):
+def save_file_with_custom_name(message, folder_path, file_data, original_name):
     try:
-        print(message)
-        if message.document:
-            file = message.document
-            save_file(file, 'presentations', message.chat.id)
-        elif message.video:
-            file = message.video
-            save_file(file, 'videos', message.chat.id)
-        elif message.photo:
-            # Берем файл с наибольшим разрешением
-            file = message.photo[-1]
-            save_file(file, 'styles', message.chat.id)
-        else:
-            bot.send_message(message.chat.id, "Файл не распознан. Пожалуйста, отправьте документ, видео или фото.")
-    except Exception as e:
-        print(f"Error during file processing: {e}")
-        bot.send_message(message.chat.id, f"Произошла ошибка при обработке файла: {e}")
+        custom_name = message.text.strip()
+        if not custom_name:
+            bot.send_message(message.chat.id, "Название файла не может быть пустым. Попробуйте снова.")
+            bot.register_next_step_handler(message, save_file_with_custom_name, folder_path, file_data, original_name)
+            return
 
-def save_file(file, folder_path, chat_id):
-    try:
-        # Получаем информацию о файле
-        file_info = bot.get_file(file.file_id)
-        downloaded_file = bot.download_file(file_info.file_path)
+        # Определяем расширение файла
+        file_extension = os.path.splitext(original_name)[1]
+        final_name = f"{custom_name}{file_extension}"
 
-        # Если у файла есть оригинальное имя (для документов), используем его
-        if hasattr(file, 'file_name'):
-            file_name = file.file_name
-        else:
-            # Если это фото или видео, генерируем имя
-            file_name = f"{file.file_id}.jpg" if folder_path == 'styles' else f"{file.file_id}.mp4"
-
-        # Убедимся, что папка существует
-        os.makedirs(folder_path, exist_ok=True)
-
-        # Полный путь для сохранения файла
-        file_path = os.path.join(folder_path, file_name)
+        # Сохраняем файл
+        file_path = os.path.join(folder_path, final_name)
         with open(file_path, 'wb') as new_file:
-            new_file.write(downloaded_file)
+            new_file.write(file_data)
 
-        bot.send_message(chat_id, f"Файл '{file_name}' успешно сохранен в папке '{folder_path}'!")
-        print(f"Файл сохранен по пути: {file_path}")
+        bot.send_message(message.chat.id, f"Файл '{final_name}' успешно сохранен в папке '{folder_path}'.")
     except Exception as e:
-        bot.send_message(chat_id, f"Произошла ошибка при сохранении файла: {e}")
-        print(f"Error during file saving: {e}")
-
+        bot.send_message(message.chat.id, f"Ошибка при сохранении файла с названием: {e}")
 
 @bot.message_handler(func=lambda message: message.text.startswith('!остановить-чат') and message.from_user.username in check_admins()[1])
 def handle_stop_chat(message):
@@ -305,49 +405,58 @@ def process_stop_chat(message):
     change_waiting_flag_false(message.text)
     bot.send_message(message.chat.id, f"Чат с {message.text} завершен.")
 
-'''@bot.message_handler(func=lambda message: message.text.startswith('!удалить-файл') and message.from_user.username in check_admins()[1])
+@bot.message_handler(func=lambda message: message.text.startswith('!удалить-файл'))
 def handle_delete_file(message):
-    presentations = get_presentations()
-    videos = get_videos()
-    images = get_images()
-    all_files = presentations + videos + images
-
-    if all_files:
-        file_names = "\n".join([os.path.basename(f) for f in all_files])
-        bot.send_message(message.chat.id, f"Доступные файлы для удаления:\n{file_names}")
-        bot.send_message(message.chat.id, "Пожалуйста, введите название файла с расширением для удаления.")
-        bot.register_next_step_handler(message, process_delete_file, all_files)
-    else:
-        bot.send_message(message.chat.id, "Нет доступных файлов для удаления.")
-
-def process_delete_file(message, all_files):
+    bot.send_message(message.chat.id, f"Укажите папку, в которой вы хотите удалить файл.\n{display_files()}")
+    bot.register_next_step_handler(message, process_delete_file, os.getcwd())  # Передаем текущую директорию
+def process_delete_file(message, current_path):
     try:
+        if message.text.lower() == "выйти":
+            bot.send_message(message.chat.id, "Выхожу из этой функции.")
+            return
+
+        target_path = os.path.join(current_path, message.text)
+
+        if not os.path.exists(target_path) or not os.path.isdir(target_path):
+            bot.send_message(message.chat.id, "Введите корректное название папки или напишите <Выйти>.")
+            bot.register_next_step_handler(message, process_delete_file, current_path)
+            return
+
+        check = check_folder_contents(target_path)
+        bot.send_message(message.chat.id, check[0])
+
+        if not check[1] and not check[2]:  # Папка пуста
+            bot.send_message(message.chat.id, "В данной папке нет файлов для удаления.")
+            return
+
+        elif not check[1] and check[2]:  # Есть только файлы
+            bot.send_message(message.chat.id, "Укажите название файла, который вы хотите удалить, или напишите <Выйти>.")
+            bot.register_next_step_handler(message, delete_file, target_path)
+
+        elif check[1] and check[2] is None:  # Есть подпапки, но нет файлов
+            bot.send_message(message.chat.id, "В данной папке нет файлов, но есть подпапки. Укажите, в какую вы хотите перейти:")
+            bot.register_next_step_handler(message, process_delete_file, target_path)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Произошла ошибка при обработке папки: {e}")
+def delete_file(message, folder_path):
+    try:
+        if message.text.lower() == "выйти":
+            bot.send_message(message.chat.id, "Выхожу из этой функции.")
+            return
+
         file_name = message.text.strip()
-        file_path = None
+        file_path = os.path.join(folder_path, file_name)
 
-        for file in all_files:
-            if os.path.basename(file) == file_name:
-                file_path = file
-                break
-
-        if file_path:
+        if os.path.exists(file_path) and os.path.isfile(file_path):
             os.remove(file_path)
-            bot.send_message(message.chat.id, f"Файл '{file_name}' был успешно удален.")
-
-            description_path = os.path.join('descriptions', f"{file_name}.txt")
-            print(f"Попытка удалить описание по пути: {description_path}")
-
-            if os.path.exists(description_path):
-                os.remove(description_path)
-                bot.send_message(message.chat.id, f"Описание для файла '{file_name}' также было удалено.")
-            else:
-                bot.send_message(message.chat.id, f"Описание для файла '{file_name}' не найдено.")
+            bot.send_message(message.chat.id, f"Файл '{file_name}' успешно удален из папки '{folder_path}'.")
         else:
-            bot.send_message(message.chat.id, "Отмена функции, введено неправильное название файла.")
+            bot.send_message(message.chat.id, "Файл с таким названием не найден. Попробуйте снова или напишите <Выйти>.")
+            bot.register_next_step_handler(message, delete_file, folder_path)
+
     except Exception as e:
         bot.send_message(message.chat.id, f"Произошла ошибка при удалении файла: {e}")
-        print(f"Error during file deletion: {e}")'''
- 
 
 @bot.message_handler(func=lambda message: message.from_user.username in check_admins()[1] and "Сообщение" in message.text)
 def handle_admin_reply(message):

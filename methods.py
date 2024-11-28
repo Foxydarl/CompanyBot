@@ -93,6 +93,7 @@ def display_files():
     sort_folders = "\n".join(sorted(folders)[3:])
     return f"Список папок:\n{sort_folders}"
 
+
 def check_folder_contents(folder_path):
     try:
         contents = os.listdir(folder_path)
