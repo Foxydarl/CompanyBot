@@ -129,7 +129,7 @@ def handle_remove_column(message):
 def handle_update_slot(message):
     try:
         if message.text == "выйти":
-            bot.send_message(message.chat.id, "ВЫхожу из функции.")
+            bot.send_message(message.chat.id, "Выхожу из функции.")
             return
         _, date, column_name, status = message.text.split(" ", 3)
         if status != "free" or "booked":
