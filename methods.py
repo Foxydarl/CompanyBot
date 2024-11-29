@@ -4,10 +4,32 @@ from datetime import datetime
 import os
 from HelperDB import *
 
+
+def open_txt_files():
+    with open("text.txt", "r", encoding="utf-8") as file:
+        company_text = file.read().strip()
+    with open("company_info.txt", "r", encoding="utf-8") as file:
+        company_info = file.read().strip()
+    with open("question.txt", "r", encoding="utf-8") as file1:
+        question_text = file1.read().strip()
+    return company_text, company_info, question_text
+
+def create_folders():
+    if not os.path.exists('presentations'):
+        os.makedirs('presentations')
+    if not os.path.exists('videos'):
+        os.makedirs('videos')
+    if not os.path.exists('examples'):
+        os.makedirs('examples')
+    if not os.path.exists('photobooth'):
+        os.makedirs('photobooth')
+    if not os.path.exists('styles'):
+        os.makedirs('styles')
+
 def request_mess(msg, prompt, dialog_history):
     url = "https://api.edenai.run/v2/text/chat"
     msg = msg.strip()
-    headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNDcyNDg2ODAtNjMzMC00MmJiLWE3NGItMjlkNTQyYjJiNzFhIiwidHlwZSI6ImFwaV90b2tlbiJ9.y_1ufwKGnOWSZqAFgDJO0h99aoOXZ9dUZDKyNBvw6ks"}
+    headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYTkxNThjMzUtOTkyMi00NGU3LThmMmMtNDNlMDQwOGE5NmViIiwidHlwZSI6ImFwaV90b2tlbiJ9.E583qyGondeavZIvpXKVMJhxXYlSsOoHwSS4bIIkG0g"}
 
     payload = {
         "providers": "openai",
@@ -64,13 +86,6 @@ def notify(message):
         f"<chat_id> Сообщение: <текст ответа>"
     )
     return notification_text
-
-def create_str_ans():
-    que, ans = get_table_as_lists()
-    st = ""
-    for i,k in zip(que,ans):
-        st += f"Если пользователь интересуется про {i} отвечай ему {k}\n"
-    return st
 
 def get_files(file):
     file_folder = file
