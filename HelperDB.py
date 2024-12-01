@@ -32,8 +32,6 @@ def createDataBase():
             telegramChatId TEXT UNIQUE DEFAULT NULL,
             telegramUserId TEXT UNIQUE DEFAULT NULL,
             whatsappPhoneNumber TEXT UNIQUE DEFAULT NULL,
-            instagramUserId TEXT UNIQUE DEFAULT NULL,
-            waiting TEXT DEFAULT "False",
             languge TEXT DEFAULT NONE
         )
     ''')
@@ -64,13 +62,11 @@ def save_data_to_db(date):
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
 
-
 def get_sorted_dates():
     """Извлечение всех дат из базы данных, отсортированных по дате"""
     cursor.execute("SELECT * FROM dates ORDER BY date ASC")
     all_dates = cursor.fetchall()
     return [date[1] for date in all_dates]
-
 
 def delete_date_from_db(data):
     """Удаление даты из базы данных"""
@@ -126,24 +122,6 @@ def add_user(message):
         conn.commit()
     except sqlite3.IntegrityError as e:
         e = e
-
-def change_waiting_flag_true(chatId):
-    cursor.execute("UPDATE users SET waiting = 'True' WHERE telegramChatId = ?", (chatId,))
-    conn.commit()
-
-def change_waiting_flag_false(chatId):
-    cursor.execute("UPDATE users SET waiting = 'False' WHERE telegramChatId = ?", (chatId,))
-    conn.commit()
-
-def if_user_waiting_admin(message):
-    cursor.execute("SELECT * FROM users WHERE waiting = 'True'", (message,))
-    print(cursor.fetchone())
-    conn.commit()
-
-def get_waiting_users():
-    cursor.execute("SELECT telegramChatId FROM users WHERE waiting = 'True'")
-    rows = cursor.fetchall()
-    return [row[0] for row in rows]
 
 def add_column(column_name):
     try:
@@ -236,7 +214,6 @@ def format_table():
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
 
-
 def check_dates_and_cabins():
     try:
         cursor.execute("SELECT * FROM dates")
@@ -290,7 +267,6 @@ def add_admin(username):
         else:
             return "Ошибка при добавлении администратора."
 
-
 def delete_admin(username):
     cursor.execute("SELECT * FROM admins WHERE username = ?", (username,))
     admin = cursor.fetchone()
@@ -307,19 +283,6 @@ def check_admins():
     cursor.execute("SELECT username FROM admins")
     usernames = [row[0] for row in cursor.fetchall()]
     return [chat_ids, usernames]
-
-def check_waiting_status(chatId):
-    try:
-        cursor.execute("SELECT waiting FROM users WHERE telegramChatId = ?", (chatId,))
-        result = cursor.fetchone()
-
-        waiting_status = result[0]
-        if waiting_status == "True":
-            return True
-        else:
-            return False
-    except Exception as e:
-        return f"⚠️ Ошибка при проверке статуса: {e}"
 
 def format_admins_table():
     try:

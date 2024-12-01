@@ -65,28 +65,6 @@ def write_file(name_file, text):
     myfile = open(f"{name_file}.txt", "w")
     return myfile.write(text)
 
-def notify(message):
-    user_id = message.chat.id
-    dialog_history = get_dialog_from_db(user_id)
-    change_waiting_flag_true(user_id)
-    if dialog_history:
-        last_10_messages = dialog_history[-10:]
-        formatted_history = "\n".join(
-            [f"{entry['role']}: {entry['message']}" for entry in last_10_messages]
-        )
-    else:
-        formatted_history = "История сообщений отсутствует."
-
-    notification_text = (
-        f"Новый запрос от пользователя:\n"
-        f"Chat ID: {user_id}\n"
-        f"Сообщение: {message.text}\n\n"
-        f"Последние 10 сообщений:\n{formatted_history}\n\n"
-        f"Для ответа используйте формат:\n"
-        f"<chat_id> Сообщение: <текст ответа>"
-    )
-    return notification_text
-
 def get_files(file):
     file_folder = file
     ends = ('.png', '.jpg', '.jpeg', '.mp4', '.mov' '.pptx', '.pdf')
