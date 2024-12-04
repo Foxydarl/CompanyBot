@@ -32,7 +32,7 @@ def createDataBase():
             telegramChatId TEXT UNIQUE DEFAULT NULL,
             telegramUserId TEXT UNIQUE DEFAULT NULL,
             whatsappPhoneNumber TEXT UNIQUE DEFAULT NULL,
-            languge TEXT DEFAULT NONE
+            language TEXT DEFAULT NONE
         )
     ''')
     conn.commit()

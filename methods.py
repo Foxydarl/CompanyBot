@@ -3,6 +3,8 @@ import json
 from datetime import datetime
 import os
 from HelperDB import *
+from googletrans import Translator
+
 
 
 def open_txt_files():
@@ -26,6 +28,15 @@ def create_folders():
     if not os.path.exists('styles'):
         os.makedirs('styles')
 
+def translate_folder_name(folder_name, target_language):
+    translator = Translator()
+    try:
+        translation = translator.translate(folder_name, dest=target_language)
+        return translation.text
+    except Exception as e:
+        print(f"Ошибка перевода: {e}")
+        return folder_name  # В случае ошибки возвращаем оригинальное название
+
 def request_mess(msg, prompt, dialog_history):
     url = "https://api.edenai.run/v2/text/chat"
     msg = msg.strip()
@@ -33,7 +44,7 @@ def request_mess(msg, prompt, dialog_history):
 
     payload = {
         "providers": "openai",
-        "settings": { "openai": "gpt-4o" } ,
+        "settings": { "openai": "gpt-4" } ,
         "text": msg,
         "chatbot_global_action": prompt ,
         "previous_history": dialog_history,
@@ -45,7 +56,7 @@ def request_mess(msg, prompt, dialog_history):
     result = json.loads(response.text)
     print("-" * 80)
     print(result)
-    return result['openai']['generated_text']
+    return result['openai/gpt-3.5-turbo']['generated_text']
 def get_mess(msg, prompt, use_history, dialog_history):
     if use_history == False:
         dialog_history = []
