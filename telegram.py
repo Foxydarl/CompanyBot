@@ -7,7 +7,7 @@ from HelperDB import *
 create_folders()
 createDataBase()
 
-bot = telebot.TeleBot("6514999735:AAHO4Ypc87aYUZ8nbDTMp6Ny8ULepl6c3fE")
+bot = telebot.TeleBot("7947945450:AAHOqe3od-WjvsnHeBb_TcQol7iVLFcahJA")
 #bot = telebot.TeleBot("7947945450:AAHOqe3od-WjvsnHeBb_TcQol7iVLFcahJA")
 dialog = []
 info_about_commands = ("Информация о командах:\n!показать-вопросы\n!удалить-вопрос-ответ ?вопрос\n!добавить-вопрос-ответ ?вопрос !ответ\n!пользователи\n!админы\n!удалить-админа\n!добавить-админа\n!добавить-колонку <название_продолжение>\n!удалить-колонку <название_продолжение>\n!обновить-слот <дата> <колонка> <статус>"
