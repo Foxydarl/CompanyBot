@@ -56,7 +56,7 @@ def request_mess(msg, prompt, dialog_history):
     result = json.loads(response.text)
     print("-" * 80)
     print(result)
-    return result['openai/gpt-3.5-turbo']['generated_text']
+    return result['openai']['generated_text']
 def get_mess(msg, prompt, use_history, dialog_history):
     if use_history == False:
         dialog_history = []
