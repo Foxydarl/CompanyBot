@@ -21,7 +21,7 @@ def createDataBase():
     ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS dialogs(
-            user_id INTEGER PRIMARY KEY,
+            user_id TEXT PRIMARY KEY,
             dialog_history TEXT
         )
     ''')

@@ -118,7 +118,7 @@ def check_folder_contents(folder_path):
         print(f"Ошибка при проверке содержимого папки: {e}")
         return ["Произошла ошибка при проверке содержимого папки.", False, False]
 
-print(display_files())
+
 
 
 
