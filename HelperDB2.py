@@ -156,7 +156,9 @@ def fill_info_table():
     #print("Таблица info заполнена данными.")
 
 
-# ---------------------- Функции для работы info -------------------------------------
+# !--------------------------------------------------------------------------------------------!
+# !--------------------------- Функции для работы info ----------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 def add_info(info_key, content):
     try:
@@ -205,7 +207,10 @@ def format_info_table():
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
 
-# ---------------------- Функции для работы QA -------------------------------------
+
+# !--------------------------------------------------------------------------------------------!
+# !----------------------------- Функции для работы QA ----------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 def add_QA(question, answer):
     try:
@@ -254,7 +259,74 @@ def format_QA_table():
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
 
-# ---------------------- Остальные функции (как в исходном коде) -------------------
+
+# !--------------------------------------------------------------------------------------------!
+# !--------------------------- Функции для работы admins --------------------------------------!
+# !--------------------------------------------------------------------------------------------!
+
+def add_admin(username):
+    cursor.execute("SELECT telegramChatId FROM users WHERE telegramUserId = ?", (username,))
+    result = cursor.fetchone()
+    if not result:
+        return f"Пользователь с username '{username}' не найден в таблице users."
+    chat_id = result[0]
+    try:
+        cursor.execute("INSERT INTO admins (chat_id, username) VALUES (?, ?)", (chat_id, username))
+        conn.commit()
+        return f"Админ с username {username} и chatId {chat_id} добавлен."
+    except sqlite3.IntegrityError as e:
+        if "UNIQUE constraint failed: admins.chat_id" in str(e):
+            return "Админ уже добавлен."
+        else:
+            return "Ошибка при добавлении администратора."
+
+def delete_admin(username):
+    cursor.execute("SELECT * FROM admins WHERE username = ?", (username,))
+    admin = cursor.fetchone()
+    if admin:
+        cursor.execute("DELETE FROM admins WHERE username = ?", (username,))
+        conn.commit()
+        return f"Админ с username '{username}' удален."
+    else:
+        return f"Админ с username '{username}' не найден."
+
+def check_admins():
+    cursor.execute("SELECT chat_id FROM admins")
+    chat_ids = [row[0] for row in cursor.fetchall()]
+    cursor.execute("SELECT username FROM admins")
+    usernames = [row[0] for row in cursor.fetchall()]
+    return [chat_ids, usernames]
+
+def format_admins_table():
+    try:
+        cursor.execute("SELECT * FROM admins")
+        rows = cursor.fetchall()
+
+        if not rows:
+            return "В базе данных нет администраторов."
+
+        columns = [desc[0] for desc in cursor.description]
+        column_widths = [max(len(str(value)) for value in [col] + [row[idx] for row in rows]) for idx, col in enumerate(columns)]
+
+        table = "┌" + "┬".join("─" * (w + 2) for w in column_widths) + "┐\n"
+        header = "│ " + " │ ".join(f"{col.ljust(column_widths[idx])}" for idx, col in enumerate(columns)) + " │\n"
+        table += header
+        table += "├" + "┼".join("─" * (w + 2) for w in column_widths) + "┤\n"
+
+        for row in rows:
+            row_line = "│ " + " │ ".join(f"{str(value).ljust(column_widths[idx])}" for idx, value in enumerate(row)) + " │\n"
+            table += row_line
+
+        table += "└" + "┴".join("─" * (w + 2) for w in column_widths) + "┘\n"
+
+        return f"📋 Таблица администраторов:\n```\n{table}```"
+    except Exception as e:
+        return f"⚠️ Ошибка: {e}"
+
+
+# !--------------------------------------------------------------------------------------------!
+# !---------------------------- Функции для работы dates --------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 def save_data_to_db(date):
     try:
@@ -310,32 +382,6 @@ def get_all_dates_from_db():
     cursor.execute("SELECT * FROM dates ORDER BY date ASC")
     rows = cursor.fetchall()
     return [date[1] for date in rows]
-
-def get_dialog_from_db(user_id):
-    cursor.execute("SELECT dialog_history FROM dialogs WHERE user_id = ?", (user_id,))
-    row = cursor.fetchone()
-    if row:
-        return json.loads(row[0])
-    return []
-
-def save_dialog_to_db(user_id, dialog_history):
-    dialog_json = json.dumps(dialog_history)
-    cursor.execute(
-        "INSERT OR REPLACE INTO dialogs (user_id, dialog_history) VALUES (?, ?)",
-        (user_id, dialog_json)
-    )
-    conn.commit()
-
-def add_user(message):
-    try:
-        cursor.execute(
-            "INSERT INTO users (telegramChatId, telegramUserId) VALUES (?, ?)",
-            (message.chat.id, message.from_user.username)
-        )
-        conn.commit()
-    except sqlite3.IntegrityError as e:
-        # Если пользователь уже есть, ничего не делаем
-        pass
 
 def add_column(column_name):
     try:
@@ -456,72 +502,21 @@ def check_dates_and_cabins():
     except Exception as e:
         return f"⚠️ Ошибка: {e}"
 
-def clear_dialog(user_id):
-    try:
-        cursor.execute("DELETE FROM dialogs WHERE user_id = ?", (user_id,))
-        conn.commit()
-        return f"✅ Диалог для пользователя с ID {user_id} успешно очищен."
-    except Exception as e:
-        return f"⚠️ Ошибка при очистке диалога: {e}"
 
-def add_admin(username):
-    cursor.execute("SELECT telegramChatId FROM users WHERE telegramUserId = ?", (username,))
-    result = cursor.fetchone()
-    if not result:
-        return f"Пользователь с username '{username}' не найден в таблице users."
-    chat_id = result[0]
+# !--------------------------------------------------------------------------------------------!
+# !----------------------------- Функции для работы users -------------------------------------!
+# !--------------------------------------------------------------------------------------------!
+
+def add_user(message):
     try:
-        cursor.execute("INSERT INTO admins (chat_id, username) VALUES (?, ?)", (chat_id, username))
+        cursor.execute(
+            "INSERT INTO users (telegramChatId, telegramUserId) VALUES (?, ?)",
+            (message.chat.id, message.from_user.username)
+        )
         conn.commit()
-        return f"Админ с username {username} и chatId {chat_id} добавлен."
     except sqlite3.IntegrityError as e:
-        if "UNIQUE constraint failed: admins.chat_id" in str(e):
-            return "Админ уже добавлен."
-        else:
-            return "Ошибка при добавлении администратора."
-
-def delete_admin(username):
-    cursor.execute("SELECT * FROM admins WHERE username = ?", (username,))
-    admin = cursor.fetchone()
-    if admin:
-        cursor.execute("DELETE FROM admins WHERE username = ?", (username,))
-        conn.commit()
-        return f"Админ с username '{username}' удален."
-    else:
-        return f"Админ с username '{username}' не найден."
-
-def check_admins():
-    cursor.execute("SELECT chat_id FROM admins")
-    chat_ids = [row[0] for row in cursor.fetchall()]
-    cursor.execute("SELECT username FROM admins")
-    usernames = [row[0] for row in cursor.fetchall()]
-    return [chat_ids, usernames]
-
-def format_admins_table():
-    try:
-        cursor.execute("SELECT * FROM admins")
-        rows = cursor.fetchall()
-
-        if not rows:
-            return "В базе данных нет администраторов."
-
-        columns = [desc[0] for desc in cursor.description]
-        column_widths = [max(len(str(value)) for value in [col] + [row[idx] for row in rows]) for idx, col in enumerate(columns)]
-
-        table = "┌" + "┬".join("─" * (w + 2) for w in column_widths) + "┐\n"
-        header = "│ " + " │ ".join(f"{col.ljust(column_widths[idx])}" for idx, col in enumerate(columns)) + " │\n"
-        table += header
-        table += "├" + "┼".join("─" * (w + 2) for w in column_widths) + "┤\n"
-
-        for row in rows:
-            row_line = "│ " + " │ ".join(f"{str(value).ljust(column_widths[idx])}" for idx, value in enumerate(row)) + " │\n"
-            table += row_line
-
-        table += "└" + "┴".join("─" * (w + 2) for w in column_widths) + "┘\n"
-
-        return f"📋 Таблица администраторов:\n```\n{table}```"
-    except Exception as e:
-        return f"⚠️ Ошибка: {e}"
+        # Если пользователь уже есть, ничего не делаем
+        pass
 
 def format_users_table():
     try:
@@ -559,3 +554,31 @@ def get_language_by_user_id(user_id):
 def add_language(chat_id, language):
     cursor.execute('UPDATE users SET language = ? WHERE telegramChatID = ?', (language, chat_id))
     conn.commit()
+
+
+# !--------------------------------------------------------------------------------------------!
+# !-------------------------- Функции для работы dialogs --------------------------------------!
+# !--------------------------------------------------------------------------------------------!
+
+def get_dialog_from_db(user_id):
+    cursor.execute("SELECT dialog_history FROM dialogs WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    if row:
+        return json.loads(row[0])
+    return []
+
+def save_dialog_to_db(user_id, dialog_history):
+    dialog_json = json.dumps(dialog_history)
+    cursor.execute(
+        "INSERT OR REPLACE INTO dialogs (user_id, dialog_history) VALUES (?, ?)",
+        (user_id, dialog_json)
+    )
+    conn.commit()
+
+def clear_dialog(user_id):
+    try:
+        cursor.execute("DELETE FROM dialogs WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return f"✅ Диалог для пользователя с ID {user_id} успешно очищен."
+    except Exception as e:
+        return f"⚠️ Ошибка при очистке диалога: {e}"

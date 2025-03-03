@@ -15,34 +15,67 @@ bot = telebot.TeleBot("7947945450:AAHOqe3od-WjvsnHeBb_TcQol7iVLFcahJA")
 
 info_about_commands = (
     "Информация о командах:\n"
+    #
+    "!пользователи\n"
+    "!команды\n"
+    "!очистить-историю-диалога\n"
+    #
     "!вопросы-ответы\n"
     "!удалить-вопрос-ответ\n"
     "!добавить-вопрос-ответ\n"
+    #
     "!информация\n"
     "!удалить-информацию\n"
     "!добавить-информацию\n"
-    "!пользователи\n"
+    "!добавить-данные-о-кабинках\n"
+    #
     "!админы\n"
     "!удалить-админа\n"
     "!добавить-админа\n"
-    "!добавить-колонку <название_продолжение>\n"
-    "!удалить-колонку <название_продолжение>\n"
-    "!обновить-слот <дата> <колонка> <статус>\n"
+    #
+    "!добавить-колонку\n"
+    "!удалить-колонку\n"
+    "!обновить-бронь-даты\n"
     "!показать-таблицу\n"
-    "!забронировать <дата> <колонка>\n"
-    "!добавить-данные-о-кабинках\n"
-    "!ожидающие-ответа\n"
+    "!забронировать\n"
     "!добавить-дату\n"
     "!удалить-дату\n"
+    #
+    "!добавить-папку\n"
+    "!удалить-папку\n"
     "!добавить-файл\n"
-    "!остановить-чат\n"
-    "!остановить-чат"
+    "!удалить-файл"
 )
+
+# !--------------------------------------------------------------------------------------------!
+# !--------------------- Слушатели для типа общие ---------------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 @bot.message_handler(func=lambda message: message.text.startswith('!пользователи') and message.from_user.username in check_admins()[1])
 def handle_show_users(message):
     formatted_table = format_users_table()
     bot.send_message(message.chat.id, formatted_table, parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: message.text.startswith('!команды') and message.from_user.username in check_admins()[1])
+def handle_show_commands(message):
+    bot.send_message(message.chat.id, info_about_commands)
+
+@bot.message_handler(func=lambda message: message.text.startswith('!очистить-историю-диалога'))
+def handle_clear_history(message):
+    try:
+        chatID = message.text.split(" ", 1)[1]
+        if chatID == "мою":
+            result = clear_dialog(message.chat.id)
+        else:
+            result = clear_dialog(int(chatID))
+    except Exception:
+        result = "⚠️ Введите существующий chat ID"
+    bot.reply_to(message, result)
+
+
+# !--------------------------------------------------------------------------------------------!
+# !--------------------- Слушатели для типа вопросы-ответы ------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 @bot.message_handler(func=lambda message: message.text.startswith('!вопросы-ответы') and message.from_user.username in check_admins()[1])
 def handle_show_QA(message):
@@ -84,6 +117,11 @@ def handle_add_QA_cmd(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка при добавлении вопроса-ответа: {e}")
 
+
+# !--------------------------------------------------------------------------------------------!
+# ---------------------- Слушатели для типа информация -----------------------------------------
+# !--------------------------------------------------------------------------------------------!
+
 @bot.message_handler(func=lambda message: message.text.startswith('!информация') and message.from_user.username in check_admins()[1])
 def handle_show_info(message):
     formatted_table = format_info_table()
@@ -124,6 +162,27 @@ def handle_add_info_cmd(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка при добавлении информации: {e}")
 
+@bot.message_handler(func=lambda message: message.text.startswith('!добавить-данные-о-кабинках') and message.from_user.username in check_admins()[1])
+def handle_add_cabins(message):
+    # В исходном коде вы писали "write_file('cabins', message.text)",
+    # Но теперь вы хотите всё хранить в БД. Можете завести отдельную таблицу, аналогично QA,
+    # или хранить в info по ключу "cabins_info". Здесь – как пример:
+    if message.from_user.username in check_admins()[1]:
+        bot.send_message(message.chat.id, "Введите информацию о кабинках.")
+        bot.register_next_step_handler(message, add_cabin_info)
+
+def add_cabin_info(message):
+    new_text = message.text
+    # Например, запишем в таблицу info под ключом "cabins_info"
+    from HelperDB import cursor, conn
+    cursor.execute('INSERT OR REPLACE INTO info (info_key, content) VALUES (?, ?)', ("cabins_info", new_text))
+    conn.commit()
+    bot.send_message(message.chat.id, "Информация о кабинках сохранена в БД под ключом 'cabins_info'.")
+
+
+# !--------------------------------------------------------------------------------------------!
+# !--------------------- Слушатели для типа админы --------------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 @bot.message_handler(func=lambda message: message.text.startswith('!админы') and message.from_user.username in check_admins()[1])
 def handle_show_admins(message):
@@ -149,9 +208,10 @@ def handle_add_admin_cmd(message):
         result = "⚠️ Не получилось добавить админа."
     bot.reply_to(message, result)
 
-@bot.message_handler(func=lambda message: message.text.startswith('!команды') and message.from_user.username in check_admins()[1])
-def handle_show_commands(message):
-    bot.send_message(message.chat.id, info_about_commands)
+
+# !--------------------------------------------------------------------------------------------!
+# !--------------------- Слушатели для типа даты ----------------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-колонку') and message.from_user.username in check_admins()[1])
 def handle_add_column_cmd(message):
@@ -160,18 +220,6 @@ def handle_add_column_cmd(message):
         result = add_column(column_name)
     except IndexError:
         result = "⚠️ Используйте: !добавить-колонку <название_продолжение>"
-    bot.reply_to(message, result)
-
-@bot.message_handler(func=lambda message: message.text.startswith('!очистить-историю-диалога'))
-def handle_clear_history(message):
-    try:
-        chatID = message.text.split(" ", 1)[1]
-        if chatID == "мою":
-            result = clear_dialog(message.chat.id)
-        else:
-            result = clear_dialog(int(chatID))
-    except Exception:
-        result = "⚠️ Введите существующий chat ID"
     bot.reply_to(message, result)
 
 @bot.message_handler(func=lambda message: message.text.startswith('!удалить-колонку') and message.from_user.username in check_admins()[1])
@@ -213,23 +261,6 @@ def handle_book_slot_cmd(message):
         result = "⚠️ Используйте: !забронировать <дата> <колонка>"
     bot.reply_to(message, result)
 
-@bot.message_handler(func=lambda message: message.text.startswith('!добавить-данные-о-кабинках') and message.from_user.username in check_admins()[1])
-def handle_add_cabins(message):
-    # В исходном коде вы писали "write_file('cabins', message.text)",
-    # Но теперь вы хотите всё хранить в БД. Можете завести отдельную таблицу, аналогично QA,
-    # или хранить в info по ключу "cabins_info". Здесь – как пример:
-    if message.from_user.username in check_admins()[1]:
-        bot.send_message(message.chat.id, "Введите информацию о кабинках.")
-        bot.register_next_step_handler(message, add_cabin_info)
-
-def add_cabin_info(message):
-    new_text = message.text
-    # Например, запишем в таблицу info под ключом "cabins_info"
-    from HelperDB import cursor, conn
-    cursor.execute('INSERT OR REPLACE INTO info (info_key, content) VALUES (?, ?)', ("cabins_info", new_text))
-    conn.commit()
-    bot.send_message(message.chat.id, "Информация о кабинках сохранена в БД под ключом 'cabins_info'.")
-
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-дату') and message.from_user.username in check_admins()[1])
 def handle_add_date_cmd(message):
     data = message.text[len('!добавить-дату '):].strip()
@@ -247,6 +278,11 @@ def handle_delete_date_cmd(message):
         bot.send_message(message.chat.id, result)
     else:
         bot.send_message(message.chat.id, "Не была указана дата для удаления. Пожалуйста, введите её.")
+
+
+# !--------------------------------------------------------------------------------------------!
+# !--------------------- Слушатели для типа файлы ---------------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-папку'))
 def handle_add_folder(message):
@@ -502,9 +538,11 @@ def delete_file(message, folder_path):
     except Exception as e:
         bot.send_message(message.chat.id, f"Произошла ошибка при удалении файла: {e}")
 
-# ------------------------------------
-# Ниже - ваш основной message_handler, который генерирует ответы
-# ------------------------------------
+
+# !--------------------------------------------------------------------------------------------!
+# !------------------------- Слушатели для текста ---------------------------------------------!
+# !--------------------------------------------------------------------------------------------!
+
 @bot.message_handler(content_types=["text"])
 def welcome(message):
     add_user(message)
@@ -609,6 +647,11 @@ def welcome(message):
     except TypeError as e:
         error_text = e.args[0]
         print(error_text)
+
+
+# !--------------------------------------------------------------------------------------------!
+# !----------------------------------- ЗАПУСК -------------------------------------------------!
+# !--------------------------------------------------------------------------------------------!
 
 if __name__ == "__main__":
     bot.infinity_polling()
