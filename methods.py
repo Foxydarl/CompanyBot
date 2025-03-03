@@ -117,8 +117,3 @@ def check_folder_contents(folder_path):
     except Exception as e:
         print(f"Ошибка при проверке содержимого папки: {e}")
         return ["Произошла ошибка при проверке содержимого папки.", False, False]
-
-
-
-
-
