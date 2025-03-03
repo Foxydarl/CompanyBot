@@ -5,8 +5,6 @@ import os
 from HelperDB import *
 from googletrans import Translator
 
-
-
 def open_txt_files():
     with open("text.txt", "r", encoding="utf-8") as file:
         company_text = file.read().strip()

@@ -15,7 +15,7 @@ def createDataBase():
     ''')
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS admins(
-            chat_id INTEGER PRIMARY KEY UNIQUE,
+            chat_id TEXT PRIMARY KEY UNIQUE,
             username TEXT UNIQUE
         )
     ''')
@@ -278,11 +278,11 @@ def delete_admin(username):
         return f"Админ с username '{username}' не найден."
 
 def check_admins():
-    cursor.execute("SELECT chat_id FROM admins")
-    chat_ids = [row[0] for row in cursor.fetchall()]
-    cursor.execute("SELECT username FROM admins")
-    usernames = [row[0] for row in cursor.fetchall()]
-    return [chat_ids, usernames]
+    cursor.execute("SELECT chat_id, username FROM admins")
+    rows = cursor.fetchall()
+    chat_ids = [r[0] for r in rows]
+    usernames = [r[1] for r in rows]
+    return chat_ids, usernames
 
 def format_admins_table():
     try:
