@@ -31,8 +31,9 @@ def handle_add_column(message):
         result = delete_admin(username)
     except Exception:
         result = "⚠️ Не получилось удалить админа."
-    bot.reply_to(message, result)
+    bot.reply_to(message, result)  
 
+    
 @bot.message_handler(func=lambda message: message.text.startswith('!добавить-админа') and message.from_user.username in check_admins()[1])
 def handle_add_column(message):
     try:
