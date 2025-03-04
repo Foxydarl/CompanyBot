@@ -88,14 +88,15 @@ import requests
 import json
 
 def request_mess(msg, prompt, dialog_history):
-    # Пример, если вы используете EdenAI + OpenAI:
     url = "https://api.edenai.run/v2/text/chat"
-    headers = {"Authorization": "Bearer ВАШ_TOKEN"}
+    msg = msg.strip()
+    headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYTkxNThjMzUtOTkyMi00NGU3LThmMmMtNDNlMDQwOGE5NmViIiwidHlwZSI6ImFwaV90b2tlbiJ9.E583qyGondeavZIvpXKVMJhxXYlSsOoHwSS4bIIkG0g"}
+
     payload = {
         "providers": "openai",
-        "settings": {"openai": "gpt-4"},
+        "settings": { "openai": "gpt-4" } ,
         "text": msg,
-        "chatbot_global_action": prompt,
+        "chatbot_global_action": prompt ,
         "previous_history": dialog_history,
         "temperature": 0.0,
         "max_tokens": 300,
@@ -103,11 +104,16 @@ def request_mess(msg, prompt, dialog_history):
     }
     response = requests.post(url, json=payload, headers=headers)
     result = json.loads(response.text)
+    print("-" * 80)
+    print(result)
     return result['openai']['generated_text']
-
 def get_mess(msg, prompt, use_history, dialog_history):
-    if not use_history:
+    if use_history == False:
         dialog_history = []
         return request_mess(msg, prompt, dialog_history)
-    else:
+    elif use_history == True:
         return request_mess(msg, prompt, dialog_history)
+
+
+def getDateAndTime(self):
+    return datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")

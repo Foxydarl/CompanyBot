@@ -1,12 +1,28 @@
 import sqlite3
 import datetime
 import json
+import time
 
-conn = sqlite3.connect('dates.db', check_same_thread=False)
+def db_execute(query, params=(), commit=False, retries=5, delay=0.1):
+    for attempt in range(retries):
+        try:
+            cursor.execute(query, params)
+            if commit:
+                conn.commit()
+            return cursor
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e):
+                time.sleep(delay)
+            else:
+                raise e
+    raise sqlite3.OperationalError("Database is locked after several attempts.")
+
+conn = sqlite3.connect('dates.db', check_same_thread=False, timeout=10)
 cursor = conn.cursor()
+db_execute("PRAGMA busy_timeout = 5000", commit=True)
 
 def get_info_by_key(key: str):
-    cursor.execute("SELECT content FROM info WHERE info_key = ?", (key,))
+    db_execute("SELECT content FROM info WHERE info_key = ?", (key,), commit=True)
     row = cursor.fetchone()
     return row[0] if row else None
 
@@ -14,25 +30,25 @@ def createDataBase():
     """
     Создаёт все необходимые таблицы, если их нет.
     """
-    cursor.execute('''
+    db_execute('''
         CREATE TABLE IF NOT EXISTS dates(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT
         )
-    ''')
-    cursor.execute('''
+    ''', commit=True)
+    db_execute('''
         CREATE TABLE IF NOT EXISTS admins(
             chat_id INTEGER PRIMARY KEY UNIQUE,
             username TEXT UNIQUE
         )
-    ''')
-    cursor.execute('''
+    ''', commit=True)
+    db_execute('''
         CREATE TABLE IF NOT EXISTS dialogs(
             user_id TEXT PRIMARY KEY,
             dialog_history TEXT
         )
-    ''')
-    cursor.execute('''
+    ''', commit=True)
+    db_execute('''
         CREATE TABLE IF NOT EXISTS users(
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             telegramChatId TEXT UNIQUE DEFAULT NULL,
@@ -40,23 +56,28 @@ def createDataBase():
             whatsappPhoneNumber TEXT UNIQUE DEFAULT NULL,
             language TEXT DEFAULT NONE
         )
-    ''')
+    ''', commit=True)
     # Новая таблица info: для хранения больших/длинных текстов по ключу
-    cursor.execute('''
+    db_execute('''
         CREATE TABLE IF NOT EXISTS info(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             info_key TEXT UNIQUE NOT NULL,
             content TEXT NOT NULL
         )
-    ''')
+    ''', commit=True)
     # Новая таблица QA: для хранения пар "вопрос - ответ"
-    cursor.execute('''
+    db_execute('''
         CREATE TABLE IF NOT EXISTS QA(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             question TEXT NOT NULL,
             answer TEXT NOT NULL
         )
-    ''')
+    ''', commit=True)
+    db_execute('''
+    CREATE TABLE IF NOT EXISTS whatsapp_admins (
+        phone_number TEXT PRIMARY KEY
+    )
+    ''', commit=True)
     conn.commit()
 
     # Если хотите, можете здесь же один раз заполнить таблицы:
@@ -149,20 +170,56 @@ def fill_info_table():
         )
     ]
     #for info_key, content in data:
-        #cursor.execute('''
+        #db_execute('''
         #    INSERT OR REPLACE INTO info (info_key, content) VALUES (?, ?)
         #''', (info_key, content))
     #conn.commit()
     #print("Таблица info заполнена данными.")
 
+# *--------------------------------------------------------------------------------------------!
+# *------------------------- Функции для работы whatsapp --------------------------------------!
+# *--------------------------------------------------------------------------------------------!
 
-# !--------------------------------------------------------------------------------------------!
-# !--------------------------- Функции для работы info ----------------------------------------!
-# !--------------------------------------------------------------------------------------------!
+# Функция для добавления пользователя по номеру WhatsApp (если его еще нет)
+def add_whatsapp_user(phone_number):
+    try:
+        db_execute('INSERT INTO users (whatsappPhoneNumber) VALUES (?)', (phone_number,), commit=True)
+        conn.commit()
+    except sqlite3.IntegrityError:
+        # Если такой пользователь уже существует, можно ничего не делать или обновить данные.
+        pass
+
+# Функция для добавления WhatsApp-админа
+def add_whatsapp_admin(phone_number):
+    try:
+        db_execute('INSERT INTO whatsapp_admins (phone_number) VALUES (?)', (phone_number,), commit=True)
+        conn.commit()
+        return "Админ успешно добавлен."
+    except sqlite3.IntegrityError:
+        return "Админ с таким номером уже существует."
+
+
+# Функция для удаления WhatsApp-админа
+def delete_whatsapp_admin(phone_number):
+    db_execute('DELETE FROM whatsapp_admins WHERE phone_number = ?', (phone_number,), commit=True)
+    conn.commit()
+    return "Админ удалён."
+
+
+# Функция для получения списка номеров WhatsApp-админов
+def check_whatsapp_admins():
+    db_execute('SELECT phone_number FROM whatsapp_admins', commit=True)
+    admins = [row[0] for row in cursor.fetchall()]
+    return admins
+
+
+# *--------------------------------------------------------------------------------------------!
+# *--------------------------- Функции для работы info ----------------------------------------!
+# *--------------------------------------------------------------------------------------------!
 
 def add_info(info_key, content):
     try:
-        cursor.execute("INSERT INTO info (info_key, content) VALUES (?, ?)", (info_key, content))
+        db_execute("INSERT INTO info (info_key, content) VALUES (?, ?)", (info_key, content), commit=True)
         conn.commit()
         return f"Текст {info_key} с ответом {content} добавлен."
     except sqlite3.IntegrityError as e:
@@ -172,10 +229,10 @@ def add_info(info_key, content):
                 return "Ошибка при добавлении Текста."
 
 def delete_info(info_key):
-    cursor.execute("SELECT * FROM info WHERE info_key = ?", (info_key,))
+    db_execute("SELECT * FROM info WHERE info_key = ?", (info_key,), commit=True)
     info_key = cursor.fetchone()
     if info_key:
-        cursor.execute("DELETE FROM info WHERE info_key = ?", (info_key,))
+        db_execute("DELETE FROM info WHERE info_key = ?", (info_key,), commit=True)
         conn.commit()
         return f"Текст с info_key '{info_key}' удален."
     else:
@@ -183,7 +240,7 @@ def delete_info(info_key):
 
 def format_info_table():
     try:
-        cursor.execute("SELECT * FROM info")
+        db_execute("SELECT * FROM info", commit=True)
         rows = cursor.fetchall()
 
         if not rows:
@@ -208,13 +265,13 @@ def format_info_table():
         return f"⚠️ Ошибка: {e}"
 
 
-# !--------------------------------------------------------------------------------------------!
-# !----------------------------- Функции для работы QA ----------------------------------------!
-# !--------------------------------------------------------------------------------------------!
+# *--------------------------------------------------------------------------------------------!
+# *----------------------------- Функции для работы QA ----------------------------------------!
+# *--------------------------------------------------------------------------------------------!
 
 def add_QA(question, answer):
     try:
-        cursor.execute("INSERT INTO QA (question, answer) VALUES (?, ?)", (question, answer))
+        db_execute("INSERT INTO QA (question, answer) VALUES (?, ?)", (question, answer), commit=True)
         conn.commit()
         return f"Вопрос {question} с ответом {answer} добавлен."
     except sqlite3.IntegrityError as e:
@@ -224,10 +281,10 @@ def add_QA(question, answer):
                 return "Ошибка при добавлении вопроса."
 
 def delete_QA(question):
-    cursor.execute("SELECT * FROM QA WHERE question = ?", (question,))
+    db_execute("SELECT * FROM QA WHERE question = ?", (question,), commit=True)
     question = cursor.fetchone()
     if question:
-        cursor.execute("DELETE FROM QA WHERE question = ?", (question,))
+        db_execute("DELETE FROM QA WHERE question = ?", (question,), commit=True)
         conn.commit()
         return f"Вопрос с question '{question}' удален."
     else:
@@ -235,7 +292,7 @@ def delete_QA(question):
 
 def format_QA_table():
     try:
-        cursor.execute("SELECT * FROM QA")
+        db_execute("SELECT * FROM QA", commit=True)
         rows = cursor.fetchall()
 
         if not rows:
@@ -260,18 +317,18 @@ def format_QA_table():
         return f"⚠️ Ошибка: {e}"
 
 
-# !--------------------------------------------------------------------------------------------!
-# !--------------------------- Функции для работы admins --------------------------------------!
-# !--------------------------------------------------------------------------------------------!
+# *--------------------------------------------------------------------------------------------!
+# *--------------------------- Функции для работы admins --------------------------------------!
+# *--------------------------------------------------------------------------------------------!
 
 def add_admin(username):
-    cursor.execute("SELECT telegramChatId FROM users WHERE telegramUserId = ?", (username,))
+    db_execute("SELECT telegramChatId FROM users WHERE telegramUserId = ?", (username,), commit=True)
     result = cursor.fetchone()
     if not result:
         return f"Пользователь с username '{username}' не найден в таблице users."
     chat_id = result[0]
     try:
-        cursor.execute("INSERT INTO admins (chat_id, username) VALUES (?, ?)", (chat_id, username))
+        db_execute("INSERT INTO admins (chat_id, username) VALUES (?, ?)", (chat_id, username), commit=True)
         conn.commit()
         return f"Админ с username {username} и chatId {chat_id} добавлен."
     except sqlite3.IntegrityError as e:
@@ -281,25 +338,25 @@ def add_admin(username):
             return "Ошибка при добавлении администратора."
 
 def delete_admin(username):
-    cursor.execute("SELECT * FROM admins WHERE username = ?", (username,))
+    db_execute("SELECT * FROM admins WHERE username = ?", (username,), commit=True)
     admin = cursor.fetchone()
     if admin:
-        cursor.execute("DELETE FROM admins WHERE username = ?", (username,))
+        db_execute("DELETE FROM admins WHERE username = ?", (username,), commit=True)
         conn.commit()
         return f"Админ с username '{username}' удален."
     else:
         return f"Админ с username '{username}' не найден."
 
 def check_admins():
-    cursor.execute("SELECT chat_id FROM admins")
+    db_execute("SELECT chat_id FROM admins", commit=True)
     chat_ids = [row[0] for row in cursor.fetchall()]
-    cursor.execute("SELECT username FROM admins")
+    db_execute("SELECT username FROM admins", commit=True)
     usernames = [row[0] for row in cursor.fetchall()]
     return [chat_ids, usernames]
 
 def format_admins_table():
     try:
-        cursor.execute("SELECT * FROM admins")
+        db_execute("SELECT * FROM admins", commit=True)
         rows = cursor.fetchall()
 
         if not rows:
@@ -324,16 +381,16 @@ def format_admins_table():
         return f"⚠️ Ошибка: {e}"
 
 
-# !--------------------------------------------------------------------------------------------!
-# !---------------------------- Функции для работы dates --------------------------------------!
-# !--------------------------------------------------------------------------------------------!
+# *--------------------------------------------------------------------------------------------!
+# *---------------------------- Функции для работы dates --------------------------------------!
+# *--------------------------------------------------------------------------------------------!
 
 def save_data_to_db(date):
     try:
         date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
         formatted_date = date_obj.strftime("%Y-%m-%d")
 
-        cursor.execute("PRAGMA table_info(dates)")
+        db_execute("PRAGMA table_info(dates)", commit=True)
         columns = [info[1] for info in cursor.fetchall()]
 
         insert_columns = ", ".join(columns[1:])
@@ -341,7 +398,7 @@ def save_data_to_db(date):
 
         values = [formatted_date] + ['free'] * (len(columns) - 2)
 
-        cursor.execute(f"INSERT INTO dates ({insert_columns}) VALUES ({placeholders})", values)
+        db_execute(f"INSERT INTO dates ({insert_columns}) VALUES ({placeholders})", values, commit=True)
         conn.commit()
 
         return "✅ Дата успешно добавлена."
@@ -353,7 +410,7 @@ def save_data_to_db(date):
         return f"⚠️ Ошибка: {e}"
 
 def get_sorted_dates():
-    cursor.execute("SELECT * FROM dates ORDER BY date ASC")
+    db_execute("SELECT * FROM dates ORDER BY date ASC", commit=True)
     all_dates = cursor.fetchall()
     return [date[1] for date in all_dates]
 
@@ -365,27 +422,27 @@ def delete_date_from_db(data):
 
     formatted_date = date_obj.strftime("%Y-%m-%d")
 
-    cursor.execute("SELECT * FROM dates WHERE date = ?", (formatted_date,))
+    db_execute("SELECT * FROM dates WHERE date = ?", (formatted_date,), commit=True)
     if cursor.fetchone() is None:
         return "Дата не найдена в базе данных."
 
-    cursor.execute("DELETE FROM dates WHERE date = ?", (formatted_date,))
+    db_execute("DELETE FROM dates WHERE date = ?", (formatted_date,), commit=True)
     conn.commit()
 
-    cursor.execute("SELECT * FROM dates WHERE date = ?", (formatted_date,))
+    db_execute("SELECT * FROM dates WHERE date = ?", (formatted_date,), commit=True)
     if cursor.fetchone() is None:
         return "Дата успешно удалена."
     else:
         return "Не удалось удалить дату. Что-то пошло не так."
 
 def get_all_dates_from_db():
-    cursor.execute("SELECT * FROM dates ORDER BY date ASC")
+    db_execute("SELECT * FROM dates ORDER BY date ASC", commit=True)
     rows = cursor.fetchall()
     return [date[1] for date in rows]
 
 def add_column(column_name):
     try:
-        cursor.execute(f"ALTER TABLE dates ADD COLUMN {column_name} TEXT DEFAULT 'free'")
+        db_execute(f"ALTER TABLE dates ADD COLUMN {column_name} TEXT DEFAULT 'free'", commit=True)
         conn.commit()
         return f"✅ Колонка '{column_name}' успешно добавлена."
     except sqlite3.OperationalError as e:
@@ -393,7 +450,7 @@ def add_column(column_name):
 
 def remove_column(column_name):
     try:
-        cursor.execute("PRAGMA table_info(dates)")
+        db_execute("PRAGMA table_info(dates)", commit=True)
         columns = [info[1] for info in cursor.fetchall()]
 
         if column_name not in columns:
@@ -402,13 +459,13 @@ def remove_column(column_name):
         columns.remove(column_name)
         columns_str = ", ".join(columns)
 
-        cursor.execute(f"CREATE TABLE dates_temp AS SELECT {columns_str} FROM dates")
+        db_execute(f"CREATE TABLE dates_temp AS SELECT {columns_str} FROM dates", commit=True)
         conn.commit()
 
-        cursor.execute("DROP TABLE dates")
+        db_execute("DROP TABLE dates", commit=True)
         conn.commit()
 
-        cursor.execute("ALTER TABLE dates_temp RENAME TO dates")
+        db_execute("ALTER TABLE dates_temp RENAME TO dates", commit=True)
         conn.commit()
 
         return f"✅ Колонка '{column_name}' успешно удалена."
@@ -417,14 +474,14 @@ def remove_column(column_name):
 
 def update_slot(date, column_name, status):
     try:
-        cursor.execute(f"UPDATE dates SET {column_name} = ? WHERE date = ?", (status, date))
+        db_execute(f"UPDATE dates SET {column_name} = ? WHERE date = ?", (status, date), commit=True)
         conn.commit()
         return f"✅ Слот '{column_name}' на дату '{date}' обновлен на '{status}'."
     except sqlite3.OperationalError as e:
         return f"⚠️ Ошибка: {e}"
 
 def view_dates():
-    cursor.execute("SELECT * FROM dates")
+    db_execute("SELECT * FROM dates", commit=True)
     rows = cursor.fetchall()
     columns = [description[0] for description in cursor.description]
 
@@ -433,11 +490,11 @@ def view_dates():
 
 def book_slot(date, column_name):
     try:
-        cursor.execute(f"SELECT {column_name} FROM dates WHERE date = ?", (date,))
+        db_execute(f"SELECT {column_name} FROM dates WHERE date = ?", (date,), commit=True)
         status = cursor.fetchone()
 
         if status and status[0] == "free":
-            cursor.execute(f"UPDATE dates SET {column_name} = 'booked' WHERE date = ?", (date,))
+            db_execute(f"UPDATE dates SET {column_name} = 'booked' WHERE date = ?", (date,), commit=True)
             conn.commit()
             return f"✅ Слот '{column_name}' на дату '{date}' успешно забронирован."
         elif status:
@@ -449,7 +506,7 @@ def book_slot(date, column_name):
 
 def format_table():
     try:
-        cursor.execute("SELECT * FROM dates")
+        db_execute("SELECT * FROM dates", commit=True)
         rows = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
 
@@ -475,7 +532,7 @@ def format_table():
 
 def check_dates_and_cabins():
     try:
-        cursor.execute("SELECT * FROM dates")
+        db_execute("SELECT * FROM dates", commit=True)
         rows = cursor.fetchall()
 
         if not rows:
@@ -503,15 +560,15 @@ def check_dates_and_cabins():
         return f"⚠️ Ошибка: {e}"
 
 
-# !--------------------------------------------------------------------------------------------!
-# !----------------------------- Функции для работы users -------------------------------------!
-# !--------------------------------------------------------------------------------------------!
+# *--------------------------------------------------------------------------------------------!
+# *----------------------------- Функции для работы users -------------------------------------!
+# *--------------------------------------------------------------------------------------------!
 
 def add_user(message):
     try:
-        cursor.execute(
+        db_execute(
             "INSERT INTO users (telegramChatId, telegramUserId) VALUES (?, ?)",
-            (message.chat.id, message.from_user.username)
+            (message.chat.id, message.from_user.username), commit=True
         )
         conn.commit()
     except sqlite3.IntegrityError as e:
@@ -520,7 +577,7 @@ def add_user(message):
 
 def format_users_table():
     try:
-        cursor.execute("SELECT * FROM users")
+        db_execute("SELECT * FROM users", commit=True)
         rows = cursor.fetchall()
 
         if not rows:
@@ -545,23 +602,23 @@ def format_users_table():
         return f"⚠️ Ошибка: {e}"
 
 def get_language_by_user_id(user_id):
-    cursor.execute('SELECT language FROM users WHERE telegramChatID = ?', (user_id,))
+    db_execute('SELECT language FROM users WHERE telegramChatID = ?', (user_id,), commit=True)
     rows = cursor.fetchall()
     if rows:
         return rows[0][0]
     return None
 
 def add_language(chat_id, language):
-    cursor.execute('UPDATE users SET language = ? WHERE telegramChatID = ?', (language, chat_id))
+    db_execute('UPDATE users SET language = ? WHERE telegramChatID = ?', (language, chat_id), commit=True)
     conn.commit()
 
 
-# !--------------------------------------------------------------------------------------------!
-# !-------------------------- Функции для работы dialogs --------------------------------------!
-# !--------------------------------------------------------------------------------------------!
+# *--------------------------------------------------------------------------------------------!
+# *-------------------------- Функции для работы dialogs --------------------------------------!
+# *--------------------------------------------------------------------------------------------!
 
 def get_dialog_from_db(user_id):
-    cursor.execute("SELECT dialog_history FROM dialogs WHERE user_id = ?", (user_id,))
+    db_execute("SELECT dialog_history FROM dialogs WHERE user_id = ?", (user_id,), commit=True)
     row = cursor.fetchone()
     if row:
         return json.loads(row[0])
@@ -569,15 +626,15 @@ def get_dialog_from_db(user_id):
 
 def save_dialog_to_db(user_id, dialog_history):
     dialog_json = json.dumps(dialog_history)
-    cursor.execute(
+    db_execute(
         "INSERT OR REPLACE INTO dialogs (user_id, dialog_history) VALUES (?, ?)",
-        (user_id, dialog_json)
+        (user_id, dialog_json), commit=True
     )
     conn.commit()
 
 def clear_dialog(user_id):
     try:
-        cursor.execute("DELETE FROM dialogs WHERE user_id = ?", (user_id,))
+        db_execute("DELETE FROM dialogs WHERE user_id = ?", (user_id,), commit=True)
         conn.commit()
         return f"✅ Диалог для пользователя с ID {user_id} успешно очищен."
     except Exception as e:
