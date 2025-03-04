@@ -49,6 +49,9 @@ def get_files(folder_path):
         if os.path.isfile(os.path.join(folder_path, f)) and f.lower().endswith(ends)
     ]
 
+def get_folders(path):
+    return [os.path.join(path, folder) for folder in os.listdir(path) if os.path.isdir(os.path.join(path, folder))]
+
 def display_files():
     """
     Показывает список папок (в текущей рабочей директории) для навигации при добавлении/удалении файлов.
@@ -115,5 +118,5 @@ def get_mess(msg, prompt, use_history, dialog_history):
         return request_mess(msg, prompt, dialog_history)
 
 
-def getDateAndTime(self):
+def getDateAndTime():
     return datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")

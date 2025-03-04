@@ -212,6 +212,17 @@ def check_whatsapp_admins():
     admins = [row[0] for row in cursor.fetchall()]
     return admins
 
+def get_language_by_user_id_whatsapp(user_id):
+    db_execute('SELECT language FROM users WHERE whatsappPhoneNumber = ?', (user_id,), commit=True)
+    rows = cursor.fetchall()
+    if rows:
+        return rows[0][0]
+    return None
+
+def add_language_whatsapp(chat_id, language):
+    db_execute('UPDATE users SET language = ? WHERE whatsappPhoneNumber = ?', (language, chat_id), commit=True)
+    conn.commit()
+
 
 # *--------------------------------------------------------------------------------------------!
 # *--------------------------- Функции для работы info ----------------------------------------!
