@@ -508,6 +508,7 @@ def webhook():
     return jsonify({"status": "ok"})
 
 def start_localtunnel(port):
+    print("starttttttt")
     cmd = ["lt", "--port", str(port), "--print-requests"]
     process = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, shell=True
