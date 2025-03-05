@@ -527,8 +527,9 @@ if __name__ == "__main__":
     def run_flask():
         app.run(host="0.0.0.0", port=LOCAL_TUNNEL_PORT)
     flask_thread = threading.Thread(target=run_flask, daemon=True)
+    print("ddddddddddddd")
     flask_thread.start()
-    
+    print("dafaf")
     lt_process, tunnel_url = start_localtunnel(LOCAL_TUNNEL_PORT)
     if tunnel_url:
         headers = {
