@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e  # Прерывать выполнение при ошибке
 
-# 🛠 1️⃣ Функция для проверки существования команды
+# 1️⃣ Функция для проверки существования команды
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
@@ -57,7 +57,10 @@ if ! command_exists pip; then
 fi
 echo "✅ pip установлен."
 
-# 🔄 8️⃣ Установка и запуск Cron (если не установлен)
+# 🔄 8️⃣ Удаление проблемных зависимостей
+pip uninstall -y googletrans httpx httpcore openai || true
+
+# 🔄 9️⃣ Установка и запуск Cron (если не установлен)
 if ! command_exists cron; then
     echo "📦 Cron не найден, устанавливаю..."
     sudo apt-get install -y cron
@@ -67,13 +70,12 @@ sudo systemctl enable cron
 sudo systemctl start cron
 echo "🚀 Cron запущен."
 
-# 🔄 9️⃣ Настройка Cron-задачи для git pull
+# 🔄 🔟 Настройка Cron-задачи для git pull
 CRON_JOB="*/1 * * * * cd ${REPO_DIR} && git pull"
-# Добавляем задачу, если её нет
 (crontab -l 2>/dev/null | grep -F "$CRON_JOB") || (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
 echo "✅ Cron-задача добавлена: git pull каждую минуту."
 
-# 📥 🔟 Установка зависимостей Python
+# 📥 1️⃣1️⃣ Установка зависимостей Python
 if [ ! -f "$REPO_DIR/requirements.txt" ]; then
     echo "❌ Ошибка: Файл requirements.txt не найден в $REPO_DIR!"
     exit 1
@@ -82,19 +84,20 @@ fi
 echo "📥 Устанавливаю зависимости Python..."
 pip install --upgrade pip
 pip install -r "$REPO_DIR/requirements.txt"
+pip install googletrans==4.0.0-rc1 httpx==0.13.3 openai
 echo "✅ Python-зависимости установлены."
 
-# 🌍 1️⃣1️⃣ Установка localtunnel через npm (если требуется)
+# 🌍 1️⃣2️⃣ Установка localtunnel через npm (если требуется)
 if ! command_exists lt; then
     echo "📦 Устанавливаю localtunnel..."
     sudo npm install -g localtunnel
 fi
 echo "✅ localtunnel установлен."
 
-# 📂 1️⃣1️⃣ Создаём папку logs (если её нет)
+# 📂 1️⃣3️⃣ Создаём папку logs (если её нет)
 mkdir -p logs
 
-# 🚀 1️⃣2️⃣ Запуск ботов в фоне с логами
+# 🚀 1️⃣4️⃣ Запуск ботов в фоне с логами
 echo "🚀 Запускаю Telegram-бот..."
 nohup python telegram2.py > logs/telegram.log 2>&1 &
 
