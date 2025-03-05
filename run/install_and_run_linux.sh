@@ -9,15 +9,21 @@ command_exists() {
 echo "Обновляю список пакетов..."
 sudo apt-get update
 
-# 1. Проверка и установка Python 3.12 (и venv)
+# Проверка и установка Python 3.12 и python3.12-venv
 if ! command_exists python3.12; then
     echo "Python3.12 не найден, устанавливаю Python 3.12 и python3.12-venv..."
     sudo apt-get install -y python3.12 python3.12-venv
 else
-    echo "Python3.12 уже установлен."
+    # Даже если Python есть, проверим, установлен ли пакет venv
+    if ! python3.12 -m venv --help >/dev/null 2>&1; then
+        echo "Пакет python3.12-venv отсутствует, устанавливаю его..."
+        sudo apt-get install -y python3.12-venv
+    else
+        echo "Python3.12 и python3.12-venv уже установлены."
+    fi
 fi
 
-# 2. Проверка и установка Node.js и npm
+# Проверка и установка Node.js и npm
 if ! command_exists node; then
     echo "Node.js не найден, устанавливаю Node.js и npm..."
     sudo apt-get install -y nodejs npm
@@ -25,7 +31,7 @@ else
     echo "Node.js уже установлен."
 fi
 
-# 3. Проверка и установка Git
+# Проверка и установка Git
 if ! command_exists git; then
     echo "Git не найден, устанавливаю Git..."
     sudo apt-get install -y git
@@ -33,7 +39,7 @@ else
     echo "Git уже установлен."
 fi
 
-# 4. Создание и активация виртуального окружения Python (если не создано)
+# Создание и активация виртуального окружения Python (если не создано)
 if [ ! -d "venv" ]; then
     echo "Создаю виртуальное окружение..."
     python3.12 -m venv venv
