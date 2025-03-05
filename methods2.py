@@ -4,7 +4,7 @@ from HelperDB2 import *
 from openai import OpenAI
 import requests
 
-API_KEY = ''
+API_KEY = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=API_KEY)
 

@@ -79,3 +79,6 @@ echo "🚀 Запускаю WhatsApp-бот..."
 nohup python whatsapp2.py > logs/whatsapp.log 2>&1 &
 
 echo "✅ Оба бота запущены!"
+
+echo 'echo "API_KEY=your_api_key_here" >> .env'
+
