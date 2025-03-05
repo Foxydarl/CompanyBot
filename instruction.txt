@@ -1,4 +1,4 @@
 для линукса, из папки CompanyBot ввести команду run/install_and_run_linux.sh
 для винды, из папки CompanyBot ввести команду run/install_and_run_windows.ps1
 
-ПРЕДВАРИТЕЛЬНО ДЛЯ ЛЮБОЙ ОС НУЖНО ВВЕСТИ echo "API_KEY=your_api_key_here" >> .env
+ПРЕДВАРИТЕЛЬНО ДЛЯ ЛЮБОЙ ОС НУЖНО ВВЕСТИ export API_KEY="key
