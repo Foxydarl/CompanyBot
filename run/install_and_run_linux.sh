@@ -91,11 +91,14 @@ if ! command_exists lt; then
 fi
 echo "✅ localtunnel установлен."
 
+# 📂 1️⃣1️⃣ Создаём папку logs (если её нет)
+mkdir -p logs
+
 # 🚀 1️⃣2️⃣ Запуск ботов в фоне с логами
 echo "🚀 Запускаю Telegram-бот..."
 nohup python telegram2.py > logs/telegram.log 2>&1 &
+
 echo "🚀 Запускаю WhatsApp-бот..."
 nohup python whatsapp2.py > logs/whatsapp.log 2>&1 &
-echo "✅ Оба бота запущены!"
 
-echo "🎉 Установка и запуск завершены!"
+echo "✅ Оба бота запущены!"
