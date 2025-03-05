@@ -14,7 +14,7 @@ if ! command_exists python3.12; then
     echo "Python3.12 не найден, устанавливаю Python 3.12 и python3.12-venv..."
     sudo apt-get install -y python3.12 python3.12-venv
 else
-    # Даже если Python есть, проверим, установлен ли пакет venv
+    # Проверяем, установлен ли venv (если нет, создаст ошибку)
     if ! python3.12 -m venv --help >/dev/null 2>&1; then
         echo "Пакет python3.12-venv отсутствует, устанавливаю его..."
         sudo apt-get install -y python3.12-venv
@@ -39,15 +39,17 @@ else
     echo "Git уже установлен."
 fi
 
-# Создание и активация виртуального окружения Python (если не создано)
-if [ ! -d "venv" ]; then
-    echo "Создаю виртуальное окружение..."
-    python3.12 -m venv venv
+# Создание и активация виртуального окружения Python
+if [ -d "venv" ]; then
+    echo "Виртуальное окружение уже существует, удаляю его..."
+    rm -rf venv
 fi
+echo "Создаю виртуальное окружение..."
+python3.12 -m venv venv
 echo "Активирую виртуальное окружение..."
 source venv/bin/activate
 
-# 5. Установка и запуск cron, если он не установлен
+# Установка и запуск cron
 if ! command_exists cron; then
     echo "Cron не найден, устанавливаю cron..."
     sudo apt-get install -y cron
@@ -56,20 +58,19 @@ echo "Включаю и запускаю сервис cron..."
 sudo systemctl enable cron
 sudo systemctl start cron
 
-# 6. Добавление cron-задачи для выполнения git pull каждые 1 минуту
-# Получаем текущую директорию (репозиторий должен быть клонирован сюда)
+# Добавление cron-задачи для выполнения git pull каждую минуту
 REPO_DIR="$(pwd)"
 CRON_JOB="*/1 * * * * cd ${REPO_DIR} && git pull"
-# Если такой записи ещё нет в crontab, добавляем её:
+# Если такой записи ещё нет, добавляем её:
 (crontab -l 2>/dev/null | grep -F "$CRON_JOB") || (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
 echo "Cron-задача добавлена: $CRON_JOB"
 
-# 7. Установка Python-зависимостей
+# Установка Python-зависимостей
 echo "Обновляю pip и устанавливаю зависимости из requirements.txt..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 8. Установка localtunnel глобально через npm (если требуется)
+# Установка localtunnel глобально через npm (если требуется)
 if ! command_exists lt; then
     echo "localtunnel не найден, устанавливаю его глобально..."
     sudo npm install -g localtunnel
@@ -77,7 +78,7 @@ else
     echo "localtunnel уже установлен."
 fi
 
-# 9. Запуск ботов параллельно
+# Запуск ботов параллельно
 echo "Запускаю Telegram-бот..."
 python telegram2.py &
 echo "Запускаю WhatsApp-бот..."
