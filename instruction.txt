@@ -1,0 +1,15 @@
+linux
+curl -fsSL https://get.docker.com | sudo bash
+sudo usermod -aG docker $USER
+sudo docker run -d -p 5000:5000 --name my_bots_container my_bots
+
+
+windows(powershell + admin)
+Set-ExecutionPolicy Bypass -Scope Process -Force
+[System.Net.ServicePointManager]::SecurityProtocol = "Tls12"
+Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+choco install docker-cli -y
+docker build -t my_bots .
+docker run -p 5000:5000 my_bots
+
+одна строка-одна команда
