@@ -1,4 +1,6 @@
 для линукса, из папки CompanyBot ввести команду run/install_and_run_linux.sh
 для винды, из папки CompanyBot ввести команду run/install_and_run_windows.ps1
 
+посмотреть активных ботов - ps aux | grep python
+
 ПРЕДВАРИТЕЛЬНО ДЛЯ ЛЮБОЙ ОС НУЖНО ВВЕСТИ export API_KEY="key
