@@ -14,18 +14,14 @@ echo "📍 Запуск из директории: $REPO_DIR"
 echo "🔄 Обновляю список пакетов..."
 sudo apt-get update && sudo apt-get upgrade -y
 
-# 🐍 3️⃣ Установка Python 3.12 и python3.12-venv
+# 🐍 3️⃣ Проверка установки Python 3.12
 if ! command_exists python3.12; then
     echo "🐍 Python 3.12 не найден, устанавливаю..."
     sudo apt-get install -y python3.12 python3.12-venv
 fi
 
-# Проверка и установка python3.12-venv (если нет)
-if ! python3.12 -m venv --help >/dev/null 2>&1; then
-    echo "📦 Устанавливаю python3.12-venv..."
-    sudo apt-get install -y python3.12-venv
-fi
-echo "✅ Python 3.12 и venv установлены."
+PYTHON_CMD=$(which python3.12 || echo "python3")
+echo "✅ Используется Python: $PYTHON_CMD"
 
 # 📦 4️⃣ Установка Node.js и npm
 if ! command_exists node; then
@@ -47,56 +43,35 @@ if [ -d "venv" ]; then
     rm -rf venv
 fi
 echo "🌱 Создаю новое виртуальное окружение..."
-python3.12 -m venv venv
+$PYTHON_CMD -m venv venv
 source venv/bin/activate
 
-# 📥 7️⃣ Установка pip внутри venv (если нет)
-if ! command_exists pip; then
-    echo "📥 Устанавливаю pip в виртуальное окружение..."
-    curl -s https://bootstrap.pypa.io/get-pip.py | python3
-fi
-echo "✅ pip установлен."
+# 📥 7️⃣ Установка pip
+pip install --upgrade pip
+echo "✅ pip обновлен."
 
-# 🔄 8️⃣ Удаление проблемных зависимостей
+# 🔄 8️⃣ Очистка зависимостей перед установкой
 pip uninstall -y googletrans httpx httpcore openai || true
 
-# 🔄 9️⃣ Установка и запуск Cron (если не установлен)
-if ! command_exists cron; then
-    echo "📦 Cron не найден, устанавливаю..."
-    sudo apt-get install -y cron
-fi
-echo "✅ Cron установлен."
-sudo systemctl enable cron
-sudo systemctl start cron
-echo "🚀 Cron запущен."
-
-# 🔄 🔟 Настройка Cron-задачи для git pull
-CRON_JOB="*/1 * * * * cd ${REPO_DIR} && git pull"
-(crontab -l 2>/dev/null | grep -F "$CRON_JOB") || (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
-echo "✅ Cron-задача добавлена: git pull каждую минуту."
-
-# 📥 1️⃣1️⃣ Установка зависимостей Python
+# 📥 9️⃣ Установка зависимостей Python
 if [ ! -f "$REPO_DIR/requirements.txt" ]; then
     echo "❌ Ошибка: Файл requirements.txt не найден в $REPO_DIR!"
     exit 1
 fi
-
-echo "📥 Устанавливаю зависимости Python..."
-pip install --upgrade pip
 pip install -r "$REPO_DIR/requirements.txt"
 echo "✅ Python-зависимости установлены."
 
-# 🌍 1️⃣2️⃣ Установка localtunnel через npm (если требуется)
+# 🌍 🔟 Установка localtunnel через npm
 if ! command_exists lt; then
     echo "📦 Устанавливаю localtunnel..."
     sudo npm install -g localtunnel
 fi
 echo "✅ localtunnel установлен."
 
-# 📂 1️⃣3️⃣ Создаём папку logs (если её нет)
+# 📂 1️⃣1️⃣ Создаём папку logs (если её нет)
 mkdir -p logs
 
-# 🚀 1️⃣4️⃣ Запуск ботов в фоне с логами
+# 🚀 1️⃣2️⃣ Запуск ботов в фоне с логами
 echo "🚀 Запускаю Telegram-бот..."
 nohup python telegram2.py > logs/telegram.log 2>&1 &
 
