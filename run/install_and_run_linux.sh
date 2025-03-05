@@ -17,7 +17,7 @@ sudo npm install -g localtunnel
 
 # 5. Запустить скрипты
 #   Если хотите оба параллельно:
-python telegram.py &
-python whatsapp.py
+python telegram2.py &
+python whatsapp2.py
 
 echo "Both bots are running now!"

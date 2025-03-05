@@ -16,5 +16,5 @@ pip install -r requirements.txt
 npm install -g localtunnel
 
 # Запуск ботов
-Start-Process powershell -ArgumentList "python telegram.py"
-Start-Process powershell -ArgumentList "python whatsapp.py"
+Start-Process powershell -ArgumentList "python telegram2.py"
+Start-Process powershell -ArgumentList "python whatsapp2.py"
