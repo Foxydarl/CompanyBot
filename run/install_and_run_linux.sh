@@ -76,7 +76,7 @@ echo "🚀 Запускаю Telegram-бот..."
 nohup python telegram2.py > logs/telegram.log 2>&1 &
 
 echo "🚀 Запускаю WhatsApp-бот..."
-nohup python whatsapp2.py > logs/whatsapp.log 2>&1 &
+nohup python codewha2.py > logs/whatsapp.log 2>&1 &
 
 echo "✅ Оба бота запущены!"
 
