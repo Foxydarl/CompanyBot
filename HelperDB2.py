@@ -21,11 +21,6 @@ conn = sqlite3.connect('dates.db', check_same_thread=False, timeout=10)
 cursor = conn.cursor()
 db_execute("PRAGMA busy_timeout = 5000", commit=True)
 
-def get_info_by_key(key: str):
-    db_execute("SELECT content FROM info WHERE info_key = ?", (key,), commit=True)
-    row = cursor.fetchone()
-    return row[0] if row else None
-
 def createDataBase():
     """
     Создаёт все необходимые таблицы, если их нет.
@@ -79,21 +74,15 @@ def createDataBase():
     )
     ''', commit=True)
     conn.commit()
+def get_info_by_key(key: str):
+    db_execute("SELECT content FROM info WHERE info_key = ?", (key,), commit=True)
+    row = cursor.fetchone()
+    return row[0] if row else None
 
-    # Если хотите, можете здесь же один раз заполнить таблицы:
-    # fill_info_table()
-    # fill_qa_table()
-
-def fill_info_table():
-    """
-    Заполняет таблицу info текстами, которые раньше были в text.txt, company_info.txt, question.txt.
-    Вызывается один раз (или по необходимости), чтобы заполнить базу.
-    """
-    data = [
-        # Вместо text.txt
-        (
-            "company_text",
-            """Приветственные сообщения
+def get_info_by_key(key:str):
+    data = {
+        "company_text":
+        """Приветственные сообщения
 - Вас приветствует AbAI.event! Фото зоны с Искусственным Интеллектом!
 Задайте ваш вопрос.
 - Глупые вопросы
@@ -118,12 +107,9 @@ def fill_info_table():
 Остались вопросы?
 Будем рады помочь!
 Контактные данные: +7 707 33 88 591 Дияр
-"""
-        ),
-        # Вместо company_info.txt
-        (
-            "company_info",
-            """instagram: https://www.instagram.com/abai.event
+""",
+        "company_info":
+        """instagram: https://www.instagram.com/abai.event
 Минимальное время заказа: 3 часа, меньше не принимаются заказы
 Стоимость: 3 часа - 300 тысяч тенге
 Фотобудки не продаются, только арендуются на время
@@ -137,12 +123,9 @@ def fill_info_table():
 Полностью ли автоматизирован ваш сервис?
 Ответ:
 Наш сервис полностью автоматизирован и не требует вашего участия в процессе. Фото, сделанные с помощью нашего устройства, автоматически обрабатываются с использованием ИИ и преобразуются в изображения, идеально соответствующие выбранной вами тематике.
-"""
-        ),
-        # Вместо question.txt
-        (
-            "question_text",
-            """Какую информацию вы бы хотели узнать и чем я могу вам помочь
+""",
+        "question_text":
+        """Какую информацию вы бы хотели узнать и чем я могу вам помочь
 1 стили обработки ИИ
 2 примеры фотографий до/после
 3 рассказать информацию про деятельность нашей компании
@@ -167,14 +150,8 @@ def fill_info_table():
 'Сейчас отправлю примеры фото с наложенным ИИ...'
 ... (и т.д. полный текст из question.txt)
 """
-        )
-    ]
-    #for info_key, content in data:
-        #db_execute('''
-        #    INSERT OR REPLACE INTO info (info_key, content) VALUES (?, ?)
-        #''', (info_key, content))
-    #conn.commit()
-    #print("Таблица info заполнена данными.")
+          }
+    return data[key]
 
 # *--------------------------------------------------------------------------------------------!
 # *------------------------- Функции для работы whatsapp --------------------------------------!
@@ -222,6 +199,32 @@ def get_language_by_user_id_whatsapp(user_id):
 def add_language_whatsapp(chat_id, language):
     db_execute('UPDATE users SET language = ? WHERE whatsappPhoneNumber = ?', (language, chat_id), commit=True)
     conn.commit()
+
+def format_admins_table_whatsapp():
+    try:
+        db_execute("SELECT * FROM whatsapp_admins", commit=True)
+        rows = cursor.fetchall()
+
+        if not rows:
+            return "В базе данных нет администраторов."
+
+        columns = [desc[0] for desc in cursor.description]
+        column_widths = [max(len(str(value)) for value in [col] + [row[idx] for row in rows]) for idx, col in enumerate(columns)]
+
+        table = "┌" + "┬".join("─" * (w + 2) for w in column_widths) + "┐\n"
+        header = "│ " + " │ ".join(f"{col.ljust(column_widths[idx])}" for idx, col in enumerate(columns)) + " │\n"
+        table += header
+        table += "├" + "┼".join("─" * (w + 2) for w in column_widths) + "┤\n"
+
+        for row in rows:
+            row_line = "│ " + " │ ".join(f"{str(value).ljust(column_widths[idx])}" for idx, value in enumerate(row)) + " │\n"
+            table += row_line
+
+        table += "└" + "┴".join("─" * (w + 2) for w in column_widths) + "┘\n"
+
+        return f"📋 Таблица администраторов:\n```\n{table}```"
+    except Exception as e:
+        return f"⚠️ Ошибка: {e}"
 
 
 # *--------------------------------------------------------------------------------------------!

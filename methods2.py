@@ -1,6 +1,12 @@
 import os
 from datetime import datetime
 from HelperDB2 import *
+from openai import OpenAI
+import requests
+
+API_KEY = ''
+
+client = OpenAI(api_key=API_KEY)
 
 # Если используете Google Translate для translate_folder_name:
 # from googletrans import Translator
@@ -13,6 +19,9 @@ def open_txt_files():
     company_text = get_info_by_key("company_text") or ""
     company_info = get_info_by_key("company_info") or ""
     question_text = get_info_by_key("question_text") or ""
+    print(company_text)
+    print(company_info)
+    print(question_text)
     return company_text, company_info, question_text
 
 def create_folders():
@@ -85,37 +94,58 @@ def check_folder_contents(folder_path):
         print(f"Ошибка при проверке содержимого папки: {e}")
         return ["Произошла ошибка при проверке содержимого папки.", False, False]
 
-# Если вам нужен функционал запроса к внешнему API (OpenAI/ChatGPT), то здесь вы можете описать request_mess/get_mess.
-# Я оставляю заглушку, так как в вашем коде это зависит от конкретных токенов/сервисов.
-import requests
-import json
+def request_mess(message, prompt, history):
+    if not message or not isinstance(message, str) or message.strip() == "":
+        return "Ошибка: сообщение пустое."
 
-def request_mess(msg, prompt, dialog_history):
-    url = "https://api.edenai.run/v2/text/chat"
-    msg = msg.strip()
-    headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYTkxNThjMzUtOTkyMi00NGU3LThmMmMtNDNlMDQwOGE5NmViIiwidHlwZSI6ImFwaV90b2tlbiJ9.E583qyGondeavZIvpXKVMJhxXYlSsOoHwSS4bIIkG0g"}
+    if not prompt or not isinstance(prompt, str) or prompt.strip() == "":
+        return "Ошибка: системный промпт отсутствует."
 
-    payload = {
-        "providers": "openai",
-        "settings": { "openai": "gpt-4" } ,
-        "text": msg,
-        "chatbot_global_action": prompt ,
-        "previous_history": dialog_history,
-        "temperature": 0.0,
-        "max_tokens": 300,
-        "fallback_providers": "openai"
-    }
-    response = requests.post(url, json=payload, headers=headers)
-    result = json.loads(response.text)
-    print("-" * 80)
-    print(result)
-    return result['openai']['generated_text']
-def get_mess(msg, prompt, use_history, dialog_history):
-    if use_history == False:
-        dialog_history = []
-        return request_mess(msg, prompt, dialog_history)
-    elif use_history == True:
-        return request_mess(msg, prompt, dialog_history)
+    model = "gpt-4o-mini"
+    messages = [{"role": "system", "content": prompt}]
+    
+    if history and isinstance(history, list):
+        messages.extend(history)
+    
+    messages.append({"role": "user", "content": message})  # Гарантия, что message не пустой
+
+    print(messages)
+
+    # Отправляем запрос
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages
+    )
+
+    # Новый API OpenAI: `message` — это объект
+    return response.choices[0].message.content
+
+def get_mess(msg, prompt, use_history, dialog_history=None):
+    if not msg or not isinstance(msg, str):  
+        return "Ошибка: сообщение отсутствует."
+
+    if not prompt or not isinstance(prompt, str):  
+        return "Ошибка: промпт отсутствует."
+
+    dialog_history = dialog_history if use_history and isinstance(dialog_history, list) else []
+    
+    return request_mess(msg, prompt, dialog_history)
+
+
+'''
+user_message = "напиши простой код на питоне"
+# Пример истории диалога: можно передать список предыдущих сообщений
+conversation_history = [
+    {"role": "assistant", "content": "Sure, here's one:"},
+    {"role": "user", "content": "I need another one, please."}
+]
+
+
+
+reply = chat_with_ai(user_message, prompt="Ты помощник по кодингу", history=conversation_history)
+print(80 * "?")
+print(reply)
+print(80 * "?")'''
 
 
 def getDateAndTime():
