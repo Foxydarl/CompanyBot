@@ -122,6 +122,8 @@ def send_document_message(chat_id: str, doc_path: str, caption: str = ""):
         print(f"Ошибка при отправке документа: {e}")
         return None
 
+
+
 def send_video_message(chat_id: str, video_path: str, caption: str = ""):
     import base64
     headers = {
