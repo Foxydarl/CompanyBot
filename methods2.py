@@ -4,8 +4,7 @@ from HelperDB2 import *
 from openai import OpenAI
 import requests
 
-API_KEY = os.getenv("OPENAI_API_KEY")
-
+API_KEY = "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"
 client = OpenAI(api_key=API_KEY)
 
 # Если используете Google Translate для translate_folder_name:
