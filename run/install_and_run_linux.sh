@@ -84,7 +84,6 @@ fi
 echo "📥 Устанавливаю зависимости Python..."
 pip install --upgrade pip
 pip install -r "$REPO_DIR/requirements.txt"
-pip install googletrans==4.0.0-rc1 httpx==0.13.3 openai
 echo "✅ Python-зависимости установлены."
 
 # 🌍 1️⃣2️⃣ Установка localtunnel через npm (если требуется)

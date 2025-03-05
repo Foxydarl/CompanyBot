@@ -2,3 +2,4 @@ pyTelegramBotAPI>=4.0.0
 Flask>=2.0.0
 requests>=2.25.1
 googletrans==4.0.0-rc1
+openai>=1.59.9
